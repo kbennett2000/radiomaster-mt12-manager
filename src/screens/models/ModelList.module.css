@@ -133,51 +133,64 @@
 
 /*
  * The tags run on like a line of text in their own column, so a second line starts under the
- * first tag. An invisible block floated to the right holds open the space on the first line where
- * the receiver type and the actions sit, and a second line can run on underneath them.
+ * first tag. The receiver type and the actions float at the right of the first line, and a second
+ * line of tags can run on underneath them.
  */
 .flow {
+  /* The row grows to hold everything in it, a receiver name that takes two lines included. */
+  display: flow-root;
   min-width: 0;
-  /* A full line may run as far as the words of the last action, not stop short of them. */
+  /*
+   * The last action's words end at the edge of the row's content, so its button runs on past
+   * that edge by the room it keeps around its words. A full line of tags may run as far.
+   */
   margin-right: calc(-1 * var(--space-2));
 }
 
-.flow::before {
-  content: '';
-  float: right;
-  width: calc(var(--row-side-width) + var(--space-3) + var(--space-2));
-  height: var(--row-line-height);
-}
-
 .side {
-  position: absolute;
-  top: var(--space-1);
-  right: var(--space-4);
+  float: right;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  width: var(--row-side-width);
-  height: var(--row-line-height);
+  margin-left: var(--space-3);
 }
 
-/* In the heading row the labels are shorter than a row's line, so the box follows the row. */
+/*
+ * The heading row has no tags to flow round its labels, so they are placed over the same two
+ * columns: as wide as a row's receiver type and actions, less the room past the content's edge.
+ */
 .head .side {
+  position: absolute;
   top: 0;
+  right: var(--space-4);
+  float: none;
+  align-items: center;
+  width: calc(var(--row-receiver-width) + var(--row-actions-width));
   height: 100%;
+  margin: 0;
 }
 
+/*
+ * The receiver type is never cut short. Its column is wide enough for the longest name, and a
+ * name that still does not fit, in a wider font, wraps to a second line and the row grows.
+ */
 .receiver {
   flex: none;
+  box-sizing: content-box;
   width: var(--row-receiver-width);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: calc((var(--row-line-height) - var(--line-body-height)) / 2) 0;
+  line-height: var(--line-body);
+}
+
+.head .receiver {
+  padding: 0;
 }
 
 .actions {
   display: flex;
   flex: none;
-  margin-left: auto;
+  justify-content: flex-end;
+  min-width: var(--row-actions-width);
 }
 
 .name {

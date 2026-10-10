@@ -92,6 +92,32 @@ function ModelRow({ model, isCurrent, isNew, onCopy, onMove, onDelete, ...drag }
       <h2 className={styles.name}>{model.name}</h2>
 
       <div className={styles.flow}>
+        {/* First in the row's flow, so the tags run round it. It floats at the right of the first line. */}
+        <div className={styles.side}>
+          <span className={styles.receiver} data-receiver-name>
+            <span className="visually-hidden">{text.columns.receiverType}: </span>
+            {strings.receiverTypes[model.receiverTypeId]}
+          </span>
+          <div className={styles.actions}>
+            <ButtonLink
+              variant="quiet"
+              size="small"
+              href={paths.editModel(model.id)}
+              aria-label={text.editNamed(model.name)}
+            >
+              {text.edit}
+            </ButtonLink>
+            <Button variant="quiet" size="small" aria-label={text.copyNamed(model.name)} onClick={onCopy}>
+              {text.copy}
+            </Button>
+            <Button variant="quiet" size="small" aria-label={text.moveNamed(model.name)} onClick={onMove}>
+              {text.move}
+            </Button>
+            <Button variant="quiet" size="small" aria-label={text.deleteNamed(model.name)} onClick={onDelete}>
+              {text.delete}
+            </Button>
+          </div>
+        </div>
         {isCurrent && (
           <span className={styles.mark}>
             <CheckIcon />
@@ -111,32 +137,6 @@ function ModelRow({ model, isCurrent, isNew, onCopy, onMove, onDelete, ...drag }
           <span className={styles.quiet}>{strings.tags.noExtras}</span>
         )}
         {tags.feedback && <span className={styles.quiet}>{tags.feedback}</span>}
-      </div>
-
-      <div className={styles.side}>
-        <span className={styles.receiver}>
-          <span className="visually-hidden">{text.columns.receiverType}: </span>
-          {strings.receiverTypes[model.receiverTypeId]}
-        </span>
-        <div className={styles.actions}>
-          <ButtonLink
-            variant="quiet"
-            size="small"
-            href={paths.editModel(model.id)}
-            aria-label={text.editNamed(model.name)}
-          >
-            {text.edit}
-          </ButtonLink>
-          <Button variant="quiet" size="small" aria-label={text.copyNamed(model.name)} onClick={onCopy}>
-            {text.copy}
-          </Button>
-          <Button variant="quiet" size="small" aria-label={text.moveNamed(model.name)} onClick={onMove}>
-            {text.move}
-          </Button>
-          <Button variant="quiet" size="small" aria-label={text.deleteNamed(model.name)} onClick={onDelete}>
-            {text.delete}
-          </Button>
-        </div>
       </div>
     </li>
   )

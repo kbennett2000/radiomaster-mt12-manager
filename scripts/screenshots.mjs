@@ -5,15 +5,19 @@
 // It serves the built site, reads the list of states from the reviewer panel, and saves the states
 // that are new or changed in this cycle, at two window sizes:
 //
-//   docs/screenshots/cycle-04/        at 1440x900
-//   docs/screenshots/cycle-04-1024/   at 1024x768
+//   docs/screenshots/cycle-05/        at 1440x900
+//   docs/screenshots/cycle-05-1024/   at 1024x768
 //
 // A page taller than the window also gets a "-full" picture of the whole page. It only ever
 // writes into those two folders. Pictures from earlier cycles are left alone.
 //
+// It also takes one picture of the list of 20 models with a wider font forced on the page, to
+// show that the receiver names still show in full on a computer whose font is wider. The app's
+// own font is not changed: the wider font exists only in that one picture.
+//
 // The script fails if a banned word shows up, a page overflows sideways, the page reports an
-// error, the list of 20 models grows taller than its target, or a row of that list runs past
-// two lines at 1440px.
+// error, the list of 20 models grows taller than its target, a row of that list runs past two
+// lines at 1440px, or a receiver name or an action in the list is cut short.
 
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -23,15 +27,48 @@ import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// The states that are new or changed in this cycle: the whole "Add a model" wizard, and the list
-// of 20 models, which shows a renamed tag and is the page the height check measures.
-const GROUPS = ['wizard']
-const ALSO = ['models-20']
+// The groups of states that are new or changed in this cycle. Connect and Finish are not.
+const GROUPS = ['models', 'delete', 'wizard']
 
 const SETS = [
-  { dir: 'docs/screenshots/cycle-04', width: 1440, height: 900 },
-  { dir: 'docs/screenshots/cycle-04-1024', width: 1024, height: 768 },
+  { dir: 'docs/screenshots/cycle-05', width: 1440, height: 900 },
+  { dir: 'docs/screenshots/cycle-05-1024', width: 1024, height: 768 },
 ]
+
+// A font that is wider than the one the app uses here, forced on the page for one picture only.
+const WIDER_FONT = { state: 'models-20', family: "Verdana, 'DejaVu Sans', sans-serif", suffix: 'wider-font' }
+
+/** Runs in the page: the receiver names in the list that do not show in full. */
+function readCutReceiverNames() {
+  return [...document.querySelectorAll('[data-receiver-name]')]
+    .filter((cell) => {
+      const style = getComputedStyle(cell)
+      const hides = style.overflowX !== 'visible' || style.textOverflow !== 'clip'
+      return cell.scrollWidth > cell.clientWidth + 1 || (hides && cell.scrollWidth > cell.clientWidth)
+    })
+    .map((cell) => cell.textContent.trim())
+}
+
+/** Runs in the page: the rows of the list with an action running past the row's edge, where it would be cut off. */
+function readRowsRunningOver() {
+  return [...document.querySelectorAll('main ol > li')]
+    .filter((row) => {
+      const edge = row.getBoundingClientRect().right
+      return [...row.querySelectorAll('a, button')].some((action) => action.getBoundingClientRect().right > edge)
+    })
+    .map((row) => row.querySelector('h2')?.textContent ?? '')
+}
+
+/** Runs in the page: how wide a few words are in the page's font, in pixels. */
+function measureWords(words) {
+  const probe = document.createElement('span')
+  probe.textContent = words
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap'
+  document.querySelector('main').append(probe)
+  const width = Math.round(probe.getBoundingClientRect().width)
+  probe.remove()
+  return width
+}
 
 // The 20 sample models must fit in about one and a half windows at 1440x900,
 // and no row of that list may run past two lines there.
@@ -131,10 +168,16 @@ async function saveSet(browser, baseUrl, set) {
   let saved = 0
 
   for (const scenario of numbered) {
-    if (!GROUPS.includes(scenario.group) && !ALSO.includes(scenario.id)) continue
+    if (!GROUPS.includes(scenario.group)) continue
     await page.goto(new URL(scenario.href, baseUrl).href)
     await settle(page)
     await check(page, scenario.name, set.width)
+    for (const name of await page.evaluate(readCutReceiverNames)) {
+      problems.push(`${scenario.name}: the receiver name "${name}" is cut short at ${set.width}px`)
+    }
+    for (const name of await page.evaluate(readRowsRunningOver)) {
+      problems.push(`${scenario.name}: the actions on the row for ${name} are cut off at ${set.width}px`)
+    }
     await page.screenshot({ path: path.join(outDir, `${scenario.name}.png`) })
     saved++
 
@@ -169,6 +212,28 @@ async function saveSet(browser, baseUrl, set) {
       } else if (long.length > 0) {
         notes.push(`At ${set.width}px these rows run past ${DENSITY.maxLines} lines: ${said}.`)
       }
+    }
+
+    if (scenario.id === WIDER_FONT.state) {
+      // The same list on a computer with a wider font. Every receiver name must still show in full.
+      const usual = await page.evaluate(measureWords, 'DumboRC X-series')
+      await page.addStyleTag({
+        content: `* { font-family: ${WIDER_FONT.family} !important } [data-review-panel] { visibility: hidden }`,
+      })
+      await page.evaluate(() => document.fonts.ready)
+      await page.waitForTimeout(150)
+      const wider = await page.evaluate(measureWords, 'DumboRC X-series')
+      notes.push(
+        `Wider font at ${set.width}px: "DumboRC X-series" is ${wider}px wide, against ${usual}px in the app's font.`,
+      )
+      if (wider <= usual) problems.push(`${scenario.name}: the wider font is not wider, so the picture proves nothing`)
+      for (const name of await page.evaluate(readCutReceiverNames)) {
+        problems.push(`${scenario.name}: in the wider font, the receiver name "${name}" is cut short at ${set.width}px`)
+      }
+      for (const name of await page.evaluate(readRowsRunningOver)) {
+        problems.push(`${scenario.name}: in the wider font, the actions on the row for ${name} are cut off at ${set.width}px`)
+      }
+      await page.screenshot({ path: path.join(outDir, `${scenario.name}-${WIDER_FONT.suffix}.png`), fullPage: true })
     }
   }
 

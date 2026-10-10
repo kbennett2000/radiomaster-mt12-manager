@@ -26,12 +26,26 @@ interface WorkedOnRadio {
 /** The sound the radio makes when an extra switches. */
 export type FeedbackSound = 'off' | 'beep' | 'voice'
 
+/**
+ * A state an extra can be in, which the radio's lights can show with a colour. Most extras have
+ * one, 'on'. A 2-speed transmission is in low or high gear, with neutral between them on a
+ * three-position switch. A "Something else" with three positions is up, in the middle or down.
+ * See feedback.ts for which states an extra has.
+ */
+export type ExtraState = 'on' | 'low' | 'high' | 'neutral' | 'up' | 'middle' | 'down'
+
 /** How the radio tells the driver that one extra has switched, so they need not look down. */
 export interface ExtraFeedback {
   sound: FeedbackSound
   vibration: boolean
   /** The colour the radio's lights show while the extra is on. Null leaves the lights alone. */
   lightColour: LightColour | null
+  /**
+   * For an extra that is not simply on or off: the colour for each of its states. A state left
+   * out leaves the lights alone. Feedback recorded before states had colours has no such list,
+   * and reads as no colour for any of them.
+   */
+  stateColours?: Partial<Record<Exclude<ExtraState, 'on'>, LightColour>>
 }
 
 /** A feature that switches between states, which the radio can announce. A dial does not. */

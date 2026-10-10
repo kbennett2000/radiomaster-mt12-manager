@@ -1,8 +1,9 @@
 import { useId } from 'react'
 import { ColourDot, Pills } from '../../components/Pills.tsx'
 import { LIGHT_COLOURS, type LightColour } from '../../domain/catalog.ts'
-import { switches, type ExtraAnswers } from '../../domain/extras.ts'
-import type { ExtraFeedback, FeedbackSound } from '../../domain/model.ts'
+import { colourStatesOf, switches, type ExtraAnswers } from '../../domain/extras.ts'
+import { colourFor, setsAColour, withColourFor } from '../../domain/feedback.ts'
+import type { ExtraFeedback, ExtraState, FeedbackSound } from '../../domain/model.ts'
 import { strings } from '../../strings/en.ts'
 import { extraName, voiceWords } from './describe.ts'
 import styles from './FeedbackStep.module.css'
@@ -18,16 +19,69 @@ type ColourChoice = LightColour | 'none'
 const toChoice = (colour: LightColour | null): ColourChoice => colour ?? 'none'
 const fromChoice = (choice: ColourChoice): LightColour | null => (choice === 'none' ? null : choice)
 
+interface ColourProps {
+  /** The state of the extra this colour is for. */
+  state: ExtraState
+  /** The extra's name, so a screen reader hears which row the choice belongs to. */
+  extraName: string
+  value: LightColour | null
+  onChange: (colour: LightColour | null) => void
+}
+
+/** The colour the radio's lights show in one state of an extra. It starts on None. */
+function ColourSetting({ state, extraName: name, value, onChange }: ColourProps) {
+  const id = useId()
+  return (
+    <div className={styles.setting}>
+      <p className={styles.settingLabel}>
+        <label htmlFor={id}>{text.colourFor[state]}</label>
+        {/* Neutral is passed through on the way between gears, so most people leave it alone. */}
+        {state === 'neutral' && <span className={styles.optional}>{text.optional}</span>}
+      </p>
+      <div className={styles.colourPicker}>
+        <ColourDot colour={value} />
+        <select
+          id={id}
+          className={styles.select}
+          value={toChoice(value)}
+          onChange={(event) => onChange(fromChoice(event.target.value as ColourChoice))}
+          aria-label={text.settingFor(text.colourFor[state], name)}
+        >
+          <option value="none">{text.none}</option>
+          {LIGHT_COLOURS.map((colour) => (
+            <option key={colour} value={colour}>
+              {text.colours[colour]}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
 interface RowProps {
   extra: ExtraAnswers
   onChange: (feedback: ExtraFeedback) => void
 }
 
-/** What the radio does each time one extra switches: a sound, a buzz, and a light colour while it is on. */
+/**
+ * What the radio does each time one extra switches: a sound, a buzz, and a light colour. An extra
+ * that is only on or off has one colour, for while it is on. One with more states, such as a
+ * 2-speed transmission, has a colour for each, on a line of their own.
+ */
 function FeedbackRow({ extra, onChange }: RowProps) {
   const name = extraName(extra)
   const feedback = extra.feedback
-  const colourId = useId()
+  const states = colourStatesOf(extra)
+  const colours = states.map((state) => (
+    <ColourSetting
+      key={state}
+      state={state}
+      extraName={name}
+      value={colourFor(feedback, state)}
+      onChange={(colour) => onChange(withColourFor(feedback, states, state, colour))}
+    />
+  ))
 
   return (
     <li className={styles.row}>
@@ -61,31 +115,9 @@ function FeedbackRow({ extra, onChange }: RowProps) {
             onChange={(vibration) => onChange({ ...feedback, vibration: vibration === 'on' })}
           />
         </div>
-        <div className={styles.setting}>
-          <label className={styles.settingLabel} htmlFor={colourId}>
-            {text.colourWhileOn}
-          </label>
-          <div className={styles.colourPicker}>
-            <ColourDot colour={feedback.lightColour} />
-            <select
-              id={colourId}
-              className={styles.select}
-              value={toChoice(feedback.lightColour)}
-              onChange={(event) =>
-                onChange({ ...feedback, lightColour: fromChoice(event.target.value as ColourChoice) })
-              }
-              aria-label={text.settingFor(text.colourWhileOn, name)}
-            >
-              <option value="none">{text.none}</option>
-              {LIGHT_COLOURS.map((colour) => (
-                <option key={colour} value={colour}>
-                  {text.colours[colour]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        {states.length === 1 && colours}
       </div>
+      {states.length > 1 && <div className={styles.settings}>{colours}</div>}
     </li>
   )
 }
@@ -98,7 +130,7 @@ export function FeedbackStep({ draft, onChange, onExtraChanged }: StepProps) {
   const modelColourId = useId()
   const modelColourHelpId = useId()
   const rows = draft.extras.filter(switches)
-  const coloured = rows.filter((extra) => extra.feedback.lightColour !== null)
+  const coloured = rows.filter((extra) => setsAColour(extra.feedback))
 
   return (
     <div className={stepStyles.step}>
@@ -131,7 +163,7 @@ export function FeedbackStep({ draft, onChange, onExtraChanged }: StepProps) {
         ) : (
           <>
             <p className={styles.help}>{text.extrasHelp}</p>
-            {/* Two extras cannot both colour the lights at once, so say which one wins. */}
+            {/* The lights show one colour at a time, so say which row wins when two would set it. */}
             <p className={styles.clash} role="status">
               {coloured.length >= 2 ? text.clash : null}
             </p>

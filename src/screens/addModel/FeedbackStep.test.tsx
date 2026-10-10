@@ -28,6 +28,17 @@ test('Step 5 asks for the model light colour and has one row per extra that swit
     strings.features.cruiseControl,
   ])
 
+  // An extra that is only on or off has one light colour. The gearbox is on the SA switch, so it
+  // has one for each gear and one for neutral. They all start on None.
+  const colourFor = (state: keyof typeof text.colourFor, extra: string) =>
+    main.queryByRole('combobox', { name: text.settingFor(text.colourFor[state], extra) }) as HTMLSelectElement | null
+  expect(colourFor('on', strings.features.frontDiffLock)?.value).toBe('none')
+  expect(colourFor('on', strings.features.twoSpeedTransmission)).toBeNull()
+  for (const state of ['low', 'high', 'neutral'] as const) {
+    expect(colourFor(state, strings.features.twoSpeedTransmission)?.value).toBe('none')
+  }
+  expect(main.getAllByText(text.optional)).toHaveLength(1)
+
   const sound = within(main.getByRole('radiogroup', { name: text.settingFor(text.sound, strings.features.frontDiffLock) }))
   expect((sound.getByRole('radio', { name: text.sounds.off }) as HTMLInputElement).checked).toBe(true)
 

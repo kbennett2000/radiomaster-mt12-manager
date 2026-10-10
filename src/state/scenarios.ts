@@ -5,7 +5,7 @@
 import { FULL_RADIO_MODELS } from '../sample/fullRadio.ts'
 import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from '../sample/sampleModels.ts'
 import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
-import type { Model, ModelId } from '../domain/model.ts'
+import type { ExtraFeedback, Model, ModelId } from '../domain/model.ts'
 import type { BaseFitting } from '../domain/radio.ts'
 import { initialState, reducer, type Action, type AppState } from './appState.ts'
 import { paths } from './useHashRoute.ts'
@@ -66,10 +66,14 @@ export const SCENARIO_IDS = [
   'wizard-extras-missing',
   'wizard-extras-winch',
   'wizard-extras-gyro-hint',
+  'wizard-extras-boat',
   'wizard-feedback-none',
   'wizard-feedback-rows',
   'wizard-feedback-voice',
   'wizard-feedback-clash',
+  'wizard-feedback-gears-switch',
+  'wizard-feedback-gears-button',
+  'wizard-feedback-three-positions',
   'wizard-review',
   'wizard-review-crawler',
   'wizard-leave',
@@ -140,6 +144,12 @@ const withExtras = (state: AppState, ...extras: PickedExtra[]): AppState =>
     return id ? reducer(picked, { type: 'wizardExtraChanged', id, answers }) : picked
   }, state)
 
+/** Sets what the radio does as one extra switches, the way step 5 does. */
+const withFeedback = (state: AppState, kind: ExtraKind, feedback: ExtraFeedback): AppState => {
+  const id = state.wizard?.draft.extras.find((extra) => extra.kind === kind)?.id
+  return id ? reducer(state, { type: 'wizardExtraChanged', id, answers: { feedback } }) : state
+}
+
 /** Folds every extra down to its summary line. */
 const folded = (state: AppState): AppState => reducer(state, { type: 'wizardChanged', view: { openExtraId: null } })
 
@@ -161,6 +171,7 @@ const wizardScenario = (
 const named: Partial<ModelDraft> = { name: 'Bouncer', vehicleKind: 'crawler' }
 const withReceiver: Partial<ModelDraft> = { ...named, receiverTypeId: 'dumborc-x' }
 const aCar: Partial<ModelDraft> = { name: 'Rally', vehicleKind: 'carOrTruck', receiverTypeId: 'spektrum-dsmr' }
+const aBoat: Partial<ModelDraft> = { name: 'Jet Boat', vehicleKind: 'boat', receiverTypeId: 'flysky-afhds2a' }
 
 // What a typical crawler has. Each takes the receiver port it is suggested: 3, 4, 5, 6, and 8 for gyro gain.
 const crawlerExtras: PickedExtra[] = [
@@ -313,11 +324,7 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'wizard-steering-car': wizardScenario('steeringThrottle', aCar),
   'wizard-steering-crawler': wizardScenario('steeringThrottle', withReceiver),
   'wizard-steering-more-options': wizardScenario('steeringThrottle', withReceiver, { moreOptionsOpen: true }),
-  'wizard-steering-boat': wizardScenario('steeringThrottle', {
-    name: 'Jet Boat',
-    vehicleKind: 'boat',
-    receiverTypeId: 'flysky-afhds2a',
-  }),
+  'wizard-steering-boat': wizardScenario('steeringThrottle', aBoat),
   'wizard-extras-empty': wizardScenario('extras', aCar),
   'wizard-extras-crawler': wizardScenario('extras', withReceiver),
   'wizard-extras-one-open': wizardState('extras', withExtras(onExtras, ['lights'])),
@@ -343,6 +350,8 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   ),
   'wizard-extras-winch': wizardState('extras', withExtras(onExtras, ['lights', { control: 'SB' }], aWinch)),
   'wizard-extras-gyro-hint': wizardState('extras', withExtras(onExtras, ['gyroGain'])),
+  // A boat has no diffs to lock, so the list is two lines shorter.
+  'wizard-extras-boat': wizardScenario('extras', aBoat),
   // A car with only gyro gain, which is a dial and so does not switch.
   'wizard-feedback-none': wizardState('feedback', folded(withExtras(wizardOn('extras', aCar), ['gyroGain', { control: 'P1' }]))),
   'wizard-feedback-rows': wizardState('feedback', folded(withExtras(onExtras, ...crawlerExtras))),
@@ -363,13 +372,55 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
       { type: 'wizardExtraChanged', id: 'rearDiffLock', answers: { feedback: { sound: 'beep', vibration: false, lightColour: 'red' } } },
     ),
   ),
+  // On the SA switch the gearbox has a neutral in the middle, so it has three colours. The front
+  // diff lock has one too, which brings up the line about which row wins.
+  'wizard-feedback-gears-switch': wizardState(
+    'feedback',
+    withFeedback(
+      withFeedback(folded(withExtras(onExtras, ...crawlerExtras)), 'twoSpeedTransmission', {
+        sound: 'voice',
+        vibration: false,
+        lightColour: null,
+        stateColours: { low: 'blue', high: 'green', neutral: 'white' },
+      }),
+      'frontDiffLock',
+      { sound: 'beep', vibration: false, lightColour: 'orange' },
+    ),
+  ),
+  // A push button only changes between the two gears, so there is no neutral to colour.
+  'wizard-feedback-gears-button': wizardState(
+    'feedback',
+    withFeedback(
+      folded(withExtras(onExtras, ['twoSpeedTransmission', { control: 'SB' }], ['lights', { control: 'SC' }])),
+      'twoSpeedTransmission',
+      { sound: 'beep', vibration: true, lightColour: null, stateColours: { low: 'blue', high: 'green' } },
+    ),
+  ),
+  'wizard-feedback-three-positions': wizardState(
+    'feedback',
+    withFeedback(folded(withExtras(onExtras, ['lights', { control: 'SB' }], aWinch)), 'customExtra', {
+      sound: 'voice',
+      vibration: false,
+      lightColour: null,
+      stateColours: { up: 'red', middle: 'white', down: 'blue' },
+    }),
+  ),
   'wizard-review': wizardScenario('review', withReceiver),
+  // The gearbox and the winch each have a colour for more than one state, which Review spells out.
   'wizard-review-crawler': wizardState(
     'review',
-    after(
-      fullCrawler,
-      { type: 'wizardChanged', draft: { lightColour: 'green' } },
-      { type: 'wizardExtraChanged', id: 'frontDiffLock', answers: { feedback: { sound: 'voice', vibration: true, lightColour: null } } },
+    withFeedback(
+      withFeedback(
+        after(
+          fullCrawler,
+          { type: 'wizardChanged', draft: { lightColour: 'green' } },
+          { type: 'wizardExtraChanged', id: 'frontDiffLock', answers: { feedback: { sound: 'voice', vibration: true, lightColour: null } } },
+        ),
+        'twoSpeedTransmission',
+        { sound: 'voice', vibration: false, lightColour: null, stateColours: { low: 'blue', high: 'green' } },
+      ),
+      'customExtra',
+      { sound: 'beep', vibration: false, lightColour: null, stateColours: { up: 'red', down: 'blue' } },
     ),
   ),
   // The address has moved off the wizard while it is open, which is what every way of leaving does.

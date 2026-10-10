@@ -6,8 +6,8 @@
 // Nothing here depends on a screen. The wizard asks these functions what to offer and what is taken.
 
 import { EXTRA_PORTS, controlKind, controlsFor, gyroGainPortFor, type ReceiverTypeId } from './catalog.ts'
-import { givesFeedback, NO_FEEDBACK } from './feedback.ts'
-import type { CustomWorks, ExtraFeedback, Feature, SwitchPosition } from './model.ts'
+import { colourStatesFor, givesFeedback, keepingColoursFor, NO_FEEDBACK } from './feedback.ts'
+import type { CustomWorks, ExtraFeedback, ExtraState, Feature, SwitchPosition } from './model.ts'
 import type { BaseFitting, ControlDefinition, ControlId, ControlKind } from './radio.ts'
 
 /** The extras the wizard offers, in the order it lists them. "Something else" can be added more than once. */
@@ -131,6 +131,13 @@ export function switches(extra: Pick<ExtraAnswers, 'kind' | 'works'>): boolean {
   return working === 'onOff' || working === 'twoSpeed' || working === 'threePositions' || working === 'cruiseOnOff'
 }
 
+/**
+ * The states of this extra the radio's lights can show a colour for. Most have one, on. A 2-speed
+ * transmission has low and high gear, and neutral too when a three-position switch works it.
+ */
+export const colourStatesOf = (extra: Pick<ExtraAnswers, 'kind' | 'works' | 'control'>): readonly ExtraState[] =>
+  colourStatesFor(workingOf(extra), extra.control ? controlKind(extra.control) : null)
+
 const controlFor = (extra: ExtraAnswers, role: ControlRole): ControlId | null =>
   role === 'speed' ? extra.speedControl : extra.control
 
@@ -245,13 +252,16 @@ export function problemsInExtra(extra: ExtraAnswers): ExtraProblem[] {
 }
 
 /**
- * Tidies answers after one of them changes, so they never contradict each other: a control of a
- * kind the extra no longer accepts is dropped. Changing how a "Something else" works can do that.
+ * Tidies answers after one of them changes, so they never contradict each other. A control of a
+ * kind the extra no longer accepts is dropped, which changing how a "Something else" works can
+ * do. So is a light colour for a state the extra no longer has, such as neutral once its control
+ * is not the three-position switch.
  */
 export function tidied(extra: ExtraAnswers): ExtraAnswers {
   const working = workingOf(extra)
   const stillFits = extra.control !== null && working !== null && ACCEPTED_KINDS[working].includes(controlKind(extra.control))
-  return stillFits || extra.control === null ? extra : { ...extra, control: null }
+  const fitted = stillFits || extra.control === null ? extra : { ...extra, control: null }
+  return { ...fitted, feedback: keepingColoursFor(fitted.feedback, colourStatesOf(fitted)) }
 }
 
 /** Turns complete answers into a feature of the model. Null while anything is missing. */

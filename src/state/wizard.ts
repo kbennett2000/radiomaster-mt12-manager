@@ -47,6 +47,13 @@ export const COMMON_ON_CRAWLERS: readonly ExtraKind[] = [
   'cruiseControl',
 ]
 
+// A boat has no diffs to lock.
+const NOT_ON_A_BOAT: readonly ExtraKind[] = ['frontDiffLock', 'rearDiffLock']
+
+/** The extras offered for a kind of vehicle, in list order. A boat is not offered the diff locks; every other kind gets all ten. */
+export const extraKindsFor = (kind: VehicleKind | null): readonly ExtraKind[] =>
+  kind === 'boat' ? EXTRA_KINDS.filter((extra) => !NOT_ON_A_BOAT.includes(extra)) : EXTRA_KINDS
+
 /** The throttle feels the wizard offers. A model read from a radio can also have a custom one. */
 export type OfferedThrottleFeel = 'standard' | 'gentle'
 
@@ -127,6 +134,18 @@ export const basicPortsOf = (draft: ModelDraft): BasicPorts => ({
   steeringPort: draft.steeringPort,
   throttlePort: draft.throttlePort,
 })
+
+/**
+ * Records answers. An extra that was picked and is not offered for the kind of vehicle is dropped
+ * with its answers, which happens when the kind changes to a boat with a diff lock picked.
+ * Changing the kind back does not bring it back.
+ */
+export function withAnswers(draft: ModelDraft, answers: Partial<ModelDraft>): ModelDraft {
+  const changed = { ...draft, ...answers }
+  const offered = extraKindsFor(changed.vehicleKind)
+  if (changed.extras.every((extra) => offered.includes(extra.kind))) return changed
+  return { ...changed, extras: changed.extras.filter((extra) => offered.includes(extra.kind)) }
+}
 
 // Extras: picking one, answering its questions, and taking it away again.
 

@@ -92,8 +92,12 @@
   --row-line-height: 2rem;
   --row-place-width: 4rem;
   --row-name-width: 8rem;
-  --row-receiver-width: 9rem;
-  --row-side-width: 24rem;
+  /*
+   * The receiver type and the actions are measured in characters, so they get the room they need
+   * whatever font the computer uses. 16 characters holds the longest receiver name on one line.
+   */
+  --row-receiver-width: 16ch;
+  --row-actions-width: calc(20ch + 8 * var(--space-2));
   --tag-height: 1.625rem;
   --picture-width: 13rem;
   --picture-width-small: 6.5rem;

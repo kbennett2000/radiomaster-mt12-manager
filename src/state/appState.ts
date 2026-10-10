@@ -25,6 +25,7 @@ import {
   modelFrom,
   newWizard,
   problemsIn,
+  withAnswers,
   withExtraChanged,
   withExtraPicked,
   withExtraRemoved,
@@ -348,16 +349,14 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'wizardStepShown':
       return state.wizard ? { ...state, wizard: { ...state.wizard, step: action.step } } : state
 
-    case 'wizardChanged':
+    case 'wizardChanged': {
       if (!state.wizard) return state
-      return {
-        ...state,
-        wizard: {
-          ...state.wizard,
-          draft: { ...state.wizard.draft, ...action.draft },
-          view: { ...state.wizard.view, ...action.view },
-        },
-      }
+      const draft = withAnswers(state.wizard.draft, action.draft ?? {})
+      const view = { ...state.wizard.view, ...action.view }
+      // An extra that has just been dropped cannot stay open.
+      const openExtraId = draft.extras.some((extra) => extra.id === view.openExtraId) ? view.openExtraId : null
+      return { ...state, wizard: { ...state.wizard, draft, view: { ...view, openExtraId } } }
+    }
 
     case 'wizardExtraPicked': {
       const wizard = state.wizard
