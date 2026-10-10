@@ -7,6 +7,7 @@
 import { APP_NAME } from '../config/app.ts'
 import type { ReceiverTypeId } from '../domain/catalog.ts'
 import type { FeedbackKind } from '../domain/model.ts'
+import type { WhenDeleting } from '../domain/positions.ts'
 import type { BaseFitting, ControlId } from '../domain/radio.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
 
@@ -90,6 +91,20 @@ export const strings = {
     title: 'Radio setup',
     save: 'Save',
     back: 'Back to your models',
+    whenDeleting: {
+      question: 'When you delete a model',
+      help: 'This decides what happens to the models after it in your list.',
+      options: {
+        closeUp: {
+          label: 'Close up the list',
+          description: 'The models after it each move up one place.',
+        },
+        leaveEmpty: {
+          label: 'Leave its place empty, the way the radio itself does',
+          description: 'No other model moves.',
+        },
+      } satisfies Record<WhenDeleting, { label: string; description: string }>,
+    },
   },
 
   // The steps for unplugging safely. This wording is a placeholder: it has not been checked on a
@@ -114,6 +129,8 @@ export const strings = {
       receiverType: 'Receiver type',
     },
     dragHandle: (name: string) => `Drag to move ${name}`,
+    dragEmptyHandle: (position: number) => `Drag to move the empty place in position ${position}`,
+    closeUp: 'Close up empty places',
     currentStrip: (name: string, position: number) => `Your radio is set to ${name}, in position ${position}.`,
     showInList: 'Show it in the list',
     currentMark: 'Your radio is set to this',
@@ -124,6 +141,7 @@ export const strings = {
     editNamed: (name: string) => `Edit ${name}`,
     copyNamed: (name: string) => `Copy ${name}`,
     moveNamed: (name: string) => `Move ${name}`,
+    moveEmptyNamed: (position: number) => `Move the empty place in position ${position}`,
     deleteNamed: (name: string) => `Delete ${name}`,
     emptyPlace: 'Empty',
     addHere: 'Add a model here',
@@ -179,8 +197,11 @@ export const strings = {
     SD: 'SD switch',
     P1: 'P1 dial',
     P2: 'P2 dial',
-    throttleTrim: 'throttle trim buttons',
-    steeringTrim: 'steering trim buttons',
+    T1: 'T1 buttons',
+    T2: 'T2 buttons',
+    T3: 'T3 buttons',
+    T4: 'T4 buttons',
+    T5: 'T5 buttons',
   } satisfies Record<ControlId, string>,
 
   receiverTypes: {
@@ -208,16 +229,23 @@ export const strings = {
 
   moveModel: {
     title: (name: string) => `Move ${name} to which position?`,
+    titleEmpty: (position: number) => `Move the empty place in position ${position} to which position?`,
     positionLabel: 'Position',
     // One line of the list of positions to choose from.
     placeHolding: (position: number, name: string) => `${position} · ${name}`,
     placeEmpty: (position: number) => `${position} · Empty`,
     placeOwn: (position: number, name: string) => `${position} · ${name} (where it is now)`,
+    placeOwnEmpty: (position: number) => `${position} · Empty (the place you are moving)`,
     // What is in the chosen position now.
     nowHolds: (position: number, name: string) => `${name} is in position ${position} now.`,
     nowEmpty: (position: number) => `Position ${position} is empty now.`,
+    startEmpty: (position: number) => `Position ${position} is the empty place you are moving.`,
     alreadyThere: (name: string, position: number) =>
       `${name} is already in position ${position}. Choose a different position to move it.`,
+    alreadyThereEmpty: (position: number) =>
+      `This empty place is already in position ${position}. Choose a different position to move it.`,
+    nothingWouldChange: (position: number) =>
+      `Nothing would change. Position ${position} is empty too, and no model sits between the two places. Choose a different position.`,
     // What else shifts, in one sentence.
     nothingElseMoves: 'No other model moves.',
     oneOtherMoves: (name: string, from: number, to: number) =>
@@ -225,6 +253,7 @@ export const strings = {
     othersMove: (count: number, first: number, last: number, direction: 'up' | 'down') =>
       `The ${count} models in positions ${first} to ${last} each move ${direction} one place.`,
     confirm: 'Move model',
+    confirmEmpty: 'Move empty place',
     cancel: 'Cancel',
   },
 
@@ -238,6 +267,11 @@ export const strings = {
   deleteModel: {
     title: (name: string) => `Delete ${name}?`,
     body: 'It will be removed from your radio. A copy is kept, so you can undo this.',
+    // What happens to the rest of the list, said before the person confirms.
+    othersWillMoveUp: (count: number) => `The ${count} models after it will each move up one place.`,
+    oneWillMoveUp: (name: string) => `${name}, the model after it, will move up one place.`,
+    lastInList: 'It is the last model in your list, so nothing else will move.',
+    willLeaveEmpty: (position: number) => `Position ${position} will be left empty. Nothing else will move.`,
     currentIntro: 'Your radio is set to this model right now.',
     switchLabel: 'Which model should your radio switch to?',
     switchPlaceholder: 'Choose a model',
@@ -249,16 +283,26 @@ export const strings = {
   notice: {
     savedTitle: 'Saved to your radio',
     copied: (name: string, position: number) => `“${name}” was added in position ${position}.`,
-    deleted: (name: string, position: number) =>
-      `“${name}” was deleted, and position ${position} is now empty. A copy is kept under Recently deleted, at the bottom of this page.`,
+    deleted: (name: string) => `“${name}” was deleted.`,
+    leftEmpty: (position: number) => `Position ${position} is now empty.`,
+    copyKept: 'A copy is kept under Recently deleted, at the bottom of this page.',
     moved: (name: string, position: number) => `“${name}” moved to position ${position}.`,
+    emptyMoved: (from: number, to: number) => `The empty place moved from position ${from} to position ${to}.`,
+    closedUp: (count: number) =>
+      count === 1
+        ? 'The empty places were closed up. Your model is now in position 1.'
+        : `The empty places were closed up. Your ${count} models are now in positions 1 to ${count}.`,
     restored: (name: string, position: number) => `“${name}” is back in position ${position}.`,
-    restoredElsewhere: (name: string, wanted: number, position: number) =>
-      `“${name}” is back. Position ${wanted} was taken, so it went to position ${position}.`,
+    undone: 'That change was undone. Your list is back the way it was.',
+    // The other models that moved because of a change.
+    othersAfterMovedUp: (count: number) => `The ${count} models after it each moved up one place.`,
+    othersMoved: (count: number, first: number, last: number, direction: 'up' | 'down') =>
+      `The ${count} models in positions ${first} to ${last} each moved ${direction} one place.`,
+    oneMoved: (name: string, direction: 'up' | 'down') => `${name} moved ${direction} one place.`,
     undo: 'Undo',
     dismiss: 'Dismiss',
     radioSetupTitle: 'Radio setup updated',
-    radioSetupBody: 'The app now knows what is fitted on the base of your radio.',
+    radioSetupBody: 'The app will use your new answers from now on.',
   },
 
   recentlyDeleted: {
@@ -305,7 +349,10 @@ export const strings = {
       'connect-connected-first-time': 'Connected, first time: what is on the base?',
       'connect-open-files-coming-next': 'Open files instead (coming next)',
       'models-20': 'The list with 20 models',
-      'models-gaps': 'The list with empty places between models',
+      'models-gaps': 'The list with empty places, and “Close up empty places”',
+      'models-closed-up': 'After closing up empty places',
+      'models-move-empty': 'Move: an empty place',
+      'models-empty-moved': 'After moving an empty place',
       'models-none': 'No models yet',
       'models-full': '60 of 60',
       'models-full-explained': '60 of 60: Add or Copy clicked',
@@ -317,14 +364,16 @@ export const strings = {
       'models-dragged': 'After a drag',
       'models-edit-coming-next': 'Edit (coming next)',
       'models-add-coming-next': 'Add a model (coming next)',
-      'models-radio-setup': 'Radio setup',
-      'delete-confirm': 'Confirm delete',
+      'models-radio-setup': 'Radio setup, with the delete question',
+      'delete-confirm': 'Confirm delete: the list will close up',
+      'delete-confirm-leave-empty': 'Confirm delete: its place will be left empty',
       'delete-current-model': 'Delete the model the radio is set to',
       'delete-current-model-not-picked': 'Same, tried to continue without picking',
       'delete-current-model-picked': 'Same, with a model picked',
-      'delete-done': 'After deleting: Undo and Recently deleted',
-      'delete-restored': 'After Restore',
-      'delete-restored-elsewhere': 'After Restore: the old place was taken',
+      'delete-done': 'After deleting: the list closed up',
+      'delete-done-left-empty': 'After deleting: its place was left empty',
+      'delete-restored': 'After Restore: models pushed down',
+      'delete-restored-empty-place': 'After Restore: its place was still empty',
       'finish-and-unplug': 'Before you unplug',
       'finish-disconnected': 'Disconnected',
     } satisfies Record<ScenarioId, string>,

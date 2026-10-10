@@ -55,8 +55,8 @@ export const SAMPLE_MODELS: readonly Model[] = [
     'spektrum-dsmr',
     [
       twoSpeed('SA', 3),
-      frontDiffLock('throttleTrim', 4),
-      rearDiffLock('steeringTrim', 5),
+      frontDiffLock('T3', 4),
+      rearDiffLock('T2', 5),
       lights('SB', 6),
       cruiseControl('SC', 'P1'),
       hornSound('SD'),
@@ -77,8 +77,8 @@ export const SAMPLE_MODELS: readonly Model[] = [
     'dumborc-x',
     [
       twoSpeed('SA', 3),
-      frontDiffLock('throttleTrim', 4),
-      rearDiffLock('steeringTrim', 5),
+      frontDiffLock('T3', 4),
+      rearDiffLock('T2', 5),
       customExtra('Trail Tracer mode', 'SB', 6),
       gyroGain('P2', 8),
       cruiseControl('SC', 'P1'),
@@ -92,8 +92,8 @@ export const SAMPLE_MODELS: readonly Model[] = [
     'dumborc-x',
     [
       twoSpeed('SA', 3),
-      frontDiffLock('throttleTrim', 4),
-      rearDiffLock('steeringTrim', 5),
+      frontDiffLock('T3', 4),
+      rearDiffLock('T2', 5),
       dragBrake('P1', 6),
       gyroGain('P2', 8),
     ],

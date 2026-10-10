@@ -3,12 +3,13 @@ import { Button } from '../../components/Button.tsx'
 import { Dialog, DialogActions } from '../../components/Dialog.tsx'
 import { MT12 } from '../../domain/catalog.ts'
 import type { Model } from '../../domain/model.ts'
-import { describeMove, modelAt } from '../../domain/positions.ts'
+import { describeMove, modelAt, type MoveEffect } from '../../domain/positions.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './MoveDialog.module.css'
 
 interface MoveDialogProps {
-  model: Model
+  /** The place being moved. It holds a model or it is empty. */
+  fromPosition: number
   /** Every model on the radio, so the dialog can say what is where. */
   models: readonly Model[]
   /** A position to start on. Only the review scenarios use this. */
@@ -21,8 +22,7 @@ const text = strings.moveModel
 const allPositions = Array.from({ length: MT12.maxModels }, (_, index) => index + 1)
 
 /** What else changes place, in one sentence. */
-function shiftSentence(models: readonly Model[], model: Model, toPosition: number): string {
-  const { shifted, direction } = describeMove(models, model.id, toPosition)
+function shiftSentence({ shifted, direction }: MoveEffect): string {
   if (shifted.length === 0) return text.nothingElseMoves
   const step = direction === 'up' ? -1 : 1
   if (shifted.length === 1) {
@@ -32,31 +32,51 @@ function shiftSentence(models: readonly Model[], model: Model, toPosition: numbe
 }
 
 /**
- * Asks which position a model should move to, and says what that will do before it is done.
- * Dragging a row does the same thing. This dialog is the way to do it from the keyboard.
+ * Asks which position a model, or an empty place, should move to, and says what that will do
+ * before it is done. Dragging a row does the same thing. This dialog is the way to do it from
+ * the keyboard.
  */
-export function MoveDialog({ model, models, toPosition, onConfirm, onCancel }: MoveDialogProps) {
-  const [position, setPosition] = useState(toPosition ?? model.position)
-  const [triedSamePlace, setTriedSamePlace] = useState(false)
+export function MoveDialog({ fromPosition, models, toPosition, onConfirm, onCancel }: MoveDialogProps) {
+  const [position, setPosition] = useState(toPosition ?? fromPosition)
+  const [tried, setTried] = useState(false)
   const select = useRef<HTMLSelectElement>(null)
   const selectId = useId()
   const effectId = useId()
 
-  const samePlace = position === model.position
-  const occupant = describeMove(models, model.id, position).occupant
+  const model = modelAt(models, fromPosition)
+  const effect = describeMove(models, fromPosition, position)
+  const samePlace = position === fromPosition
+  // An empty place moved past no models leaves the list exactly as it was.
+  const changesNothing = !samePlace && !model && effect.shifted.length === 0
+  const refused = samePlace || changesNothing
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (samePlace) {
-      setTriedSamePlace(true)
+    if (refused) {
+      setTried(true)
       select.current?.focus()
     } else {
       onConfirm(position)
     }
   }
 
+  let lines: string[]
+  if (samePlace && tried) {
+    lines = [model ? text.alreadyThere(model.name, position) : text.alreadyThereEmpty(position)]
+  } else if (samePlace) {
+    lines = [model ? text.nowHolds(position, model.name) : text.startEmpty(position)]
+  } else if (changesNothing) {
+    lines = [text.nothingWouldChange(position)]
+  } else {
+    lines = [
+      effect.occupant ? text.nowHolds(position, effect.occupant.name) : text.nowEmpty(position),
+      shiftSentence(effect),
+    ]
+  }
+  const showAsProblem = (samePlace && tried) || changesNothing
+
   return (
-    <Dialog title={text.title(model.name)} onDismiss={onCancel}>
+    <Dialog title={model ? text.title(model.name) : text.titleEmpty(fromPosition)} onDismiss={onCancel}>
       <form onSubmit={submit} noValidate>
         <label className={styles.label} htmlFor={selectId}>
           {text.positionLabel}
@@ -68,14 +88,16 @@ export function MoveDialog({ model, models, toPosition, onConfirm, onCancel }: M
           value={position}
           onChange={(event) => setPosition(Number(event.target.value))}
           aria-describedby={effectId}
-          aria-invalid={samePlace && triedSamePlace ? true : undefined}
+          aria-invalid={showAsProblem ? true : undefined}
           data-autofocus
         >
           {allPositions.map((place) => {
             const holder = modelAt(models, place)
-            let words = text.placeEmpty(place)
-            if (holder) {
-              words = holder.id === model.id ? text.placeOwn(place, holder.name) : text.placeHolding(place, holder.name)
+            let words: string
+            if (place === fromPosition) {
+              words = holder ? text.placeOwn(place, holder.name) : text.placeOwnEmpty(place)
+            } else {
+              words = holder ? text.placeHolding(place, holder.name) : text.placeEmpty(place)
             }
             return (
               <option key={place} value={place}>
@@ -85,20 +107,15 @@ export function MoveDialog({ model, models, toPosition, onConfirm, onCancel }: M
           })}
         </select>
         <div id={effectId} className={styles.effect} aria-live="polite">
-          {samePlace ? (
-            <p className={triedSamePlace ? styles.problem : undefined}>
-              {triedSamePlace ? text.alreadyThere(model.name, position) : text.nowHolds(position, model.name)}
+          {lines.map((line) => (
+            <p key={line} className={showAsProblem ? styles.problem : undefined}>
+              {line}
             </p>
-          ) : (
-            <>
-              <p>{occupant ? text.nowHolds(position, occupant.name) : text.nowEmpty(position)}</p>
-              <p>{shiftSentence(models, model, position)}</p>
-            </>
-          )}
+          ))}
         </div>
         <DialogActions>
           <Button type="submit" variant="primary">
-            {text.confirm}
+            {model ? text.confirm : text.confirmEmpty}
           </Button>
           <Button onClick={onCancel}>{text.cancel}</Button>
         </DialogActions>

@@ -22,6 +22,9 @@ export const SCENARIO_IDS = [
   'connect-open-files-coming-next',
   'models-20',
   'models-gaps',
+  'models-closed-up',
+  'models-move-empty',
+  'models-empty-moved',
   'models-none',
   'models-full',
   'models-full-explained',
@@ -35,12 +38,14 @@ export const SCENARIO_IDS = [
   'models-add-coming-next',
   'models-radio-setup',
   'delete-confirm',
+  'delete-confirm-leave-empty',
   'delete-current-model',
   'delete-current-model-not-picked',
   'delete-current-model-picked',
   'delete-done',
+  'delete-done-left-empty',
   'delete-restored',
-  'delete-restored-elsewhere',
+  'delete-restored-empty-place',
   'finish-and-unplug',
   'finish-disconnected',
 ] as const
@@ -72,12 +77,19 @@ const ready = (
 // m08 is Slash 2WD, m11 is Micro B, m14 is MojaveGrom, and m20 (Mini 8ight) is the one the radio is set to.
 const copyName = 'TRX-4 Snow'
 
+// Three deletes with the list closing up after each one, which is what happens by default.
 const threeDeleted = after(
   ready(),
   { type: 'deleteConfirmed', modelId: 'm14' },
   { type: 'deleteConfirmed', modelId: 'm11' },
   { type: 'deleteConfirmed', modelId: 'm08' },
 )
+
+/** The same radio with "Leave its place empty" chosen in Radio setup. */
+const leavingPlacesEmpty: AppState = { ...ready(), whenDeleting: 'leaveEmpty' }
+
+// A radio that arrived with empty places already in its list: positions 8, 11 and 14 hold nothing.
+const arrivedWithGaps = ready(SAMPLE_MODELS.filter((model) => ![8, 11, 14].includes(model.position)))
 
 const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
@@ -93,8 +105,22 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-open-files-coming-next': { group: 'connect', path: paths.openFiles, state: notConnected },
 
   'models-20': { group: 'models', path: paths.home, state: ready() },
-  // Three deletes leave positions 8, 11 and 14 empty, with models on both sides of each.
-  'models-gaps': { group: 'models', path: paths.home, state: after(threeDeleted, { type: 'noticeDismissed' }) },
+  'models-gaps': { group: 'models', path: paths.home, state: arrivedWithGaps },
+  'models-closed-up': {
+    group: 'models',
+    path: paths.home,
+    state: after(arrivedWithGaps, { type: 'emptyPlacesClosedUp' }),
+  },
+  'models-move-empty': {
+    group: 'models',
+    path: paths.home,
+    state: { ...arrivedWithGaps, dialog: { type: 'move', fromPosition: 8, toPosition: 10 } },
+  },
+  'models-empty-moved': {
+    group: 'models',
+    path: paths.home,
+    state: after(arrivedWithGaps, { type: 'placeMoved', fromPosition: 8, toPosition: 10 }),
+  },
   'models-none': { group: 'models', path: paths.home, state: ready([], null) },
   'models-full': { group: 'models', path: paths.home, state: ready(FULL_RADIO_MODELS) },
   'models-full-explained': {
@@ -120,18 +146,18 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'models-move': {
     group: 'models',
     path: paths.home,
-    state: { ...ready(), dialog: { type: 'move', modelId: 'm03', toPosition: 7 } },
+    state: { ...ready(), dialog: { type: 'move', fromPosition: 3, toPosition: 7 } },
   },
   'models-moved': {
     group: 'models',
     path: paths.home,
-    state: after(ready(), { type: 'modelMoved', modelId: 'm03', toPosition: 7 }),
+    state: after(ready(), { type: 'placeMoved', fromPosition: 3, toPosition: 7 }),
   },
   // A drag ends in the same action as the Move dialog. Here Mini 8ight was dragged from 20 up to 2.
   'models-dragged': {
     group: 'models',
     path: paths.home,
-    state: after(ready(), { type: 'modelMoved', modelId: SAMPLE_CURRENT_MODEL_ID, toPosition: 2 }),
+    state: after(ready(), { type: 'placeMoved', fromPosition: 20, toPosition: 2 }),
   },
   'models-edit-coming-next': { group: 'models', path: paths.editModel('m03'), state: ready() },
   'models-add-coming-next': { group: 'models', path: paths.addModel, state: ready() },
@@ -145,6 +171,11 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
     group: 'delete',
     path: paths.home,
     state: after(ready(), { type: 'deleteRequested', modelId: 'm08' }),
+  },
+  'delete-confirm-leave-empty': {
+    group: 'delete',
+    path: paths.home,
+    state: after(leavingPlacesEmpty, { type: 'deleteRequested', modelId: 'm08' }),
   },
   'delete-current-model': {
     group: 'delete',
@@ -166,19 +197,23 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
     state: { ...ready(), dialog: { type: 'delete', modelId: SAMPLE_CURRENT_MODEL_ID, switchToId: 'm03' } },
   },
   'delete-done': { group: 'delete', path: paths.home, state: threeDeleted },
+  'delete-done-left-empty': {
+    group: 'delete',
+    path: paths.home,
+    state: after(leavingPlacesEmpty, { type: 'deleteConfirmed', modelId: 'm08' }),
+  },
+  // Micro B was deleted from position 11 and the list closed up, so bringing it back pushes models down.
   'delete-restored': {
     group: 'delete',
     path: paths.home,
     state: after(threeDeleted, { type: 'restoreRequested', modelId: 'm11' }),
   },
-  // Micro B's old place, 11, is taken by a copy before it is restored, so it goes to the next empty place.
-  'delete-restored-elsewhere': {
+  'delete-restored-empty-place': {
     group: 'delete',
     path: paths.home,
     state: after(
-      ready(),
+      leavingPlacesEmpty,
       { type: 'deleteConfirmed', modelId: 'm11' },
-      { type: 'copyConfirmed', modelId: 'm10', name: 'Slash 4x4b' },
       { type: 'restoreRequested', modelId: 'm11' },
     ),
   },

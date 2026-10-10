@@ -78,8 +78,9 @@ function App({ initialState }: { initialState: AppState }) {
     screen = (
       <RadioSetupScreen
         baseFitting={state.radio.baseFitting}
-        onSave={(baseFitting) => {
-          dispatch({ type: 'radioSetupSaved', baseFitting })
+        whenDeleting={state.whenDeleting}
+        onSave={(baseFitting, whenDeleting) => {
+          dispatch({ type: 'radioSetupSaved', baseFitting, whenDeleting })
           goTo(paths.home)
         }}
       />

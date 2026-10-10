@@ -3,7 +3,7 @@ import { Button, ButtonLink } from '../../components/Button.tsx'
 import { CheckIcon, GripIcon, PlusIcon } from '../../components/icons.tsx'
 import { MT12 } from '../../domain/catalog.ts'
 import type { Model, ModelId } from '../../domain/model.ts'
-import { lastTakenPosition } from '../../domain/positions.ts'
+import { hasEmptyPlacesToCloseUp, lastTakenPosition } from '../../domain/positions.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './ModelList.module.css'
@@ -12,9 +12,8 @@ import { rowId } from './rowId.ts'
 
 const text = strings.models
 
-/** A row being dragged: which model, where it started, and the position the pointer is over. */
+/** A row being dragged: the position it started in, and the position the pointer is over. */
 interface Drag {
-  modelId: ModelId
   from: number
   over: number | null
 }
@@ -22,36 +21,48 @@ interface Drag {
 /** Where the dragged row would land compared with the row under the pointer. */
 type DropSide = 'before' | 'after' | undefined
 
-interface RowTarget {
+/** What every row needs to be dragged and to be dropped on. */
+interface Draggable {
+  isDragging: boolean
   dropSide: DropSide
+  onDragStart: (event: DragEvent<HTMLElement>) => void
+  onDragEnd: () => void
   onDragOver: (event: DragEvent<HTMLLIElement>) => void
   onDrop: (event: DragEvent<HTMLLIElement>) => void
 }
 
-interface ModelRowProps extends RowTarget {
-  model: Model
-  isCurrent: boolean
-  isDragging: boolean
+interface HandleProps {
+  position: number
+  /** What dragging this handle moves, in words. */
+  title: string
   onDragStart: (event: DragEvent<HTMLElement>) => void
   onDragEnd: () => void
+}
+
+/** The grip and the position number at the start of a row. Dragging it moves the row. */
+function Handle({ position, title, onDragStart, onDragEnd }: HandleProps) {
+  return (
+    <span className={styles.handle} draggable title={title} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <span className={styles.grip} aria-hidden="true">
+        <GripIcon />
+      </span>
+      <span className={styles.number}>
+        <span className="visually-hidden">{text.columns.position} </span>
+        {position}
+      </span>
+    </span>
+  )
+}
+
+interface ModelRowProps extends Draggable {
+  model: Model
+  isCurrent: boolean
   onCopy: () => void
   onMove: () => void
   onDelete: () => void
 }
 
-function ModelRow({
-  model,
-  isCurrent,
-  isDragging,
-  dropSide,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-  onCopy,
-  onMove,
-  onDelete,
-}: ModelRowProps) {
+function ModelRow({ model, isCurrent, onCopy, onMove, onDelete, ...drag }: ModelRowProps) {
   const tags = tagsFor(model)
 
   return (
@@ -60,29 +71,21 @@ function ModelRow({
       className={styles.row}
       tabIndex={-1}
       data-current={isCurrent || undefined}
-      data-dragging={isDragging || undefined}
-      data-drop={dropSide}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      data-dragging={drag.isDragging || undefined}
+      data-drop={drag.dropSide}
+      onDragOver={drag.onDragOver}
+      onDrop={drag.onDrop}
     >
-      <span
-        className={styles.handle}
-        draggable
+      <Handle
+        position={model.position}
         title={text.dragHandle(model.name)}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      >
-        <span className={styles.grip} aria-hidden="true">
-          <GripIcon />
-        </span>
-        <span className={styles.number}>
-          <span className="visually-hidden">{text.columns.position} </span>
-          {model.position}
-        </span>
-      </span>
+        onDragStart={drag.onDragStart}
+        onDragEnd={drag.onDragEnd}
+      />
+
+      <h2 className={styles.name}>{model.name}</h2>
 
       <div className={styles.flow}>
-        <h2 className={styles.name}>{model.name}</h2>
         {isCurrent && (
           <span className={styles.mark}>
             <CheckIcon />
@@ -118,28 +121,13 @@ function ModelRow({
           >
             {text.edit}
           </ButtonLink>
-          <Button
-            variant="quiet"
-            size="small"
-            aria-label={text.copyNamed(model.name)}
-            onClick={onCopy}
-          >
+          <Button variant="quiet" size="small" aria-label={text.copyNamed(model.name)} onClick={onCopy}>
             {text.copy}
           </Button>
-          <Button
-            variant="quiet"
-            size="small"
-            aria-label={text.moveNamed(model.name)}
-            onClick={onMove}
-          >
+          <Button variant="quiet" size="small" aria-label={text.moveNamed(model.name)} onClick={onMove}>
             {text.move}
           </Button>
-          <Button
-            variant="quiet"
-            size="small"
-            aria-label={text.deleteNamed(model.name)}
-            onClick={onDelete}
-          >
+          <Button variant="quiet" size="small" aria-label={text.deleteNamed(model.name)} onClick={onDelete}>
             {text.delete}
           </Button>
         </div>
@@ -148,18 +136,29 @@ function ModelRow({
   )
 }
 
-/** An empty place that sits between two models. */
-function EmptyRow({ position, dropSide, onDragOver, onDrop }: RowTarget & { position: number }) {
+interface EmptyRowProps extends Draggable {
+  position: number
+  onMove: () => void
+}
+
+/** An empty place with a model somewhere after it. It can be dragged and moved like a model. */
+function EmptyRow({ position, onMove, ...drag }: EmptyRowProps) {
   return (
-    <li className={styles.emptyRow} data-drop={dropSide} onDragOver={onDragOver} onDrop={onDrop}>
-      <span className={styles.handle}>
-        <span className={styles.number}>
-          <span className="visually-hidden">{text.columns.position} </span>
-          {position}
-        </span>
-      </span>
-      <div className={styles.emptyWords}>
-        <span className={styles.quiet}>{text.emptyPlace}</span>
+    <li
+      className={styles.emptyRow}
+      data-dragging={drag.isDragging || undefined}
+      data-drop={drag.dropSide}
+      onDragOver={drag.onDragOver}
+      onDrop={drag.onDrop}
+    >
+      <Handle
+        position={position}
+        title={text.dragEmptyHandle(position)}
+        onDragStart={drag.onDragStart}
+        onDragEnd={drag.onDragEnd}
+      />
+      <span className={styles.emptyName}>{text.emptyPlace}</span>
+      <div className={styles.emptyActions}>
         <ButtonLink
           variant="quiet"
           size="small"
@@ -169,6 +168,9 @@ function EmptyRow({ position, dropSide, onDragOver, onDrop }: RowTarget & { posi
         >
           {text.addHere}
         </ButtonLink>
+        <Button variant="quiet" size="small" aria-label={text.moveEmptyNamed(position)} onClick={onMove}>
+          {text.move}
+        </Button>
       </div>
     </li>
   )
@@ -179,36 +181,56 @@ interface ModelListProps {
   /** The model the radio is currently set to. */
   currentModelId: ModelId | null
   onCopy: (modelId: ModelId) => void
-  /** The Move action was chosen, so the person should be asked for a position. */
-  onMoveRequested: (modelId: ModelId) => void
+  /** The Move action was chosen on the row in this position, so the person should be asked where to. */
+  onMoveRequested: (position: number) => void
   /** A row was dragged and dropped on another place. */
-  onMoved: (modelId: ModelId, toPosition: number) => void
+  onMoved: (fromPosition: number, toPosition: number) => void
   onDelete: (modelId: ModelId) => void
+  /** Removes every empty place that has a model after it. */
+  onCloseUp: () => void
 }
 
 /**
  * The radio's list, one row per place, from position 1 to the last place that holds a model.
- * An empty place between two models gets a row of its own. The empty places after the last
+ * An empty place with a model after it gets a row of its own. The empty places after the last
  * model are summed up in one line underneath.
  *
- * A row can be dragged by its handle and dropped on another row. Dropping on a row means
- * "move to that row's position", which is the same thing the Move dialog asks for.
+ * Any row, a model or an empty place, can be dragged by its handle and dropped on another row.
+ * Dropping on a row means "move to that row's position", which is what the Move dialog asks for.
  */
-export function ModelList({ models, currentModelId, onCopy, onMoveRequested, onMoved, onDelete }: ModelListProps) {
+export function ModelList({
+  models,
+  currentModelId,
+  onCopy,
+  onMoveRequested,
+  onMoved,
+  onDelete,
+  onCloseUp,
+}: ModelListProps) {
   const [drag, setDrag] = useState<Drag | null>(null)
 
   const inPlace = new Map(models.map((model) => [model.position, model]))
   const last = lastTakenPosition(models)
   const positions = Array.from({ length: last }, (_, index) => index + 1)
 
-  function target(position: number): RowTarget {
+  function draggable(position: number, label: string): Draggable {
     // Moving down, the row lands after the one it is dropped on. Moving up, before it.
     let dropSide: DropSide
     if (drag && drag.over === position && position !== drag.from) {
       dropSide = position > drag.from ? 'after' : 'before'
     }
     return {
+      isDragging: drag?.from === position,
       dropSide,
+      onDragStart: (event) => {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', label)
+        // Show the whole row under the pointer, not just the handle.
+        const row = event.currentTarget.closest('li')
+        if (row) event.dataTransfer.setDragImage(row, event.nativeEvent.offsetX, row.offsetHeight / 2)
+        setDrag({ from: position, over: null })
+      },
+      onDragEnd: () => setDrag(null),
       onDragOver: (event) => {
         if (!drag) return
         event.preventDefault()
@@ -219,28 +241,26 @@ export function ModelList({ models, currentModelId, onCopy, onMoveRequested, onM
         if (!drag) return
         event.preventDefault()
         setDrag(null)
-        if (position !== drag.from) onMoved(drag.modelId, position)
+        if (position !== drag.from) onMoved(drag.from, position)
       },
     }
-  }
-
-  function startDrag(event: DragEvent<HTMLElement>, model: Model) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', model.name)
-    // Show the whole row under the pointer, not just the handle.
-    const row = event.currentTarget.closest('li')
-    if (row) event.dataTransfer.setDragImage(row, event.nativeEvent.offsetX, row.offsetHeight / 2)
-    setDrag({ modelId: model.id, from: model.position, over: null })
   }
 
   return (
     <div>
       <div className={styles.surface}>
-        <div className={styles.head} aria-hidden="true">
-          <span>{text.columns.position}</span>
-          <span>{text.columns.model}</span>
+        <div className={styles.head}>
+          <span aria-hidden="true">{text.columns.position}</span>
+          <span aria-hidden="true">{text.columns.model}</span>
           <div className={styles.side}>
-            <span className={styles.receiver}>{text.columns.receiverType}</span>
+            <span className={styles.receiver} aria-hidden="true">
+              {text.columns.receiverType}
+            </span>
+            {hasEmptyPlacesToCloseUp(models) && (
+              <button type="button" className={styles.closeUp} onClick={onCloseUp}>
+                {text.closeUp}
+              </button>
+            )}
           </div>
         </div>
         <ol className={styles.list}>
@@ -251,16 +271,18 @@ export function ModelList({ models, currentModelId, onCopy, onMoveRequested, onM
                 key={model.id}
                 model={model}
                 isCurrent={model.id === currentModelId}
-                isDragging={drag?.modelId === model.id}
-                {...target(position)}
-                onDragStart={(event) => startDrag(event, model)}
-                onDragEnd={() => setDrag(null)}
+                {...draggable(position, model.name)}
                 onCopy={() => onCopy(model.id)}
-                onMove={() => onMoveRequested(model.id)}
+                onMove={() => onMoveRequested(position)}
                 onDelete={() => onDelete(model.id)}
               />
             ) : (
-              <EmptyRow key={`empty-${position}`} position={position} {...target(position)} />
+              <EmptyRow
+                key={`empty-${position}`}
+                position={position}
+                {...draggable(position, text.emptyPlace)}
+                onMove={() => onMoveRequested(position)}
+              />
             )
           })}
         </ol>

@@ -33,12 +33,7 @@ export function ConnectScreen({ state, onConnect, onBaseFittingAnswered }: Conne
         <h1>{text.connected.title}</h1>
         <p className={styles.intro}>{text.connected.oneQuestion}</p>
         <div className={styles.question}>
-          <BaseFittingForm
-            initial={null}
-            submitLabel={text.connected.continue}
-            onSubmit={onBaseFittingAnswered}
-            saysItCanChangeLater
-          />
+          <BaseFittingForm submitLabel={text.connected.continue} onSubmit={onBaseFittingAnswered} />
         </div>
       </div>
     )

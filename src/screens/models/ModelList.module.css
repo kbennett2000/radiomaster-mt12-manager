@@ -8,13 +8,17 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Three columns: the place, the name, and the tags. A name wider than usual pushes its own tags along. */
 .head,
 .row,
 .emptyRow {
   position: relative;
   display: grid;
-  grid-template-columns: var(--row-place-width) minmax(0, 1fr);
-  column-gap: var(--space-3);
+  grid-template-columns:
+    var(--row-place-width)
+    minmax(var(--row-name-width), max-content)
+    minmax(0, 1fr);
+  column-gap: var(--space-2);
   padding: var(--space-1) var(--space-4);
   line-height: var(--row-line-height);
 }
@@ -48,7 +52,8 @@
   background: var(--color-accent);
 }
 
-.row[data-dragging] {
+.row[data-dragging],
+.emptyRow[data-dragging] {
   opacity: 0.45;
 }
 
@@ -107,18 +112,20 @@
 }
 
 /*
- * The name and tags run on like a line of text. An invisible block floated to the right holds
- * open the space on the first line where the receiver type and the actions sit, so a second
- * line, if there is one, can use the full width underneath them.
+ * The tags run on like a line of text in their own column, so a second line starts under the
+ * first tag. An invisible block floated to the right holds open the space on the first line where
+ * the receiver type and the actions sit, and a second line can run on underneath them.
  */
 .flow {
   min-width: 0;
+  /* A full line may run as far as the words of the last action, not stop short of them. */
+  margin-right: calc(-1 * var(--space-2));
 }
 
 .flow::before {
   content: '';
   float: right;
-  width: calc(var(--row-side-width) + var(--space-3));
+  width: calc(var(--row-side-width) + var(--space-3) + var(--space-2));
   height: var(--row-line-height);
 }
 
@@ -153,14 +160,11 @@
   margin-left: auto;
 }
 
-/* Every name gets the same width, so the tags start in a column. */
 .name {
-  display: inline-block;
-  min-width: var(--row-name-width);
-  margin-right: var(--space-3);
   font-size: var(--text-heading-3);
-  line-height: 1;
+  line-height: var(--row-line-height);
   letter-spacing: normal;
+  white-space: nowrap;
 }
 
 .tags {
@@ -200,10 +204,33 @@
   white-space: nowrap;
 }
 
-.emptyWords {
+/* The last thing in a row needs no room after it, which can save it from wrapping. */
+.quiet:last-child {
+  margin-right: 0;
+}
+
+.emptyName {
+  color: var(--color-text-muted);
+}
+
+.emptyActions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+
+/* A quiet action in the heading row. It looks like a link so the heading row keeps its height. */
+.closeUp {
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent-strong);
+  line-height: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .after {

@@ -1,3 +1,7 @@
+.whatElse {
+  margin-top: var(--space-3);
+}
+
 .switch {
   margin-top: var(--space-5);
   padding: var(--space-5);

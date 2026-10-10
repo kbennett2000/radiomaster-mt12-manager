@@ -11,10 +11,14 @@ export type ControlId =
   | 'SD'
   | 'P1'
   | 'P2'
-  | 'throttleTrim'
-  | 'steeringTrim'
+  | 'T1'
+  | 'T2'
+  | 'T3'
+  | 'T4'
+  | 'T5'
 
-export type ControlType = 'wheel' | 'trigger' | 'switch' | 'dial' | 'trimButtons'
+/** 'buttons' is a pair of small buttons that work together, such as T1. */
+export type ControlType = 'wheel' | 'trigger' | 'switch' | 'dial' | 'buttons'
 
 export interface ControlDefinition {
   id: ControlId
