@@ -1,9 +1,11 @@
 import { useId, type ReactNode } from 'react'
 import { MT12, RECEIVER_PORTS } from '../../domain/catalog.ts'
+import type { ExtraAnswers } from '../../domain/extras.ts'
 import type { Direction } from '../../domain/model.ts'
 import type { PercentRange } from '../../domain/radio.ts'
 import { throttleFeelOf, type OfferedThrottleFeel } from '../../state/wizard.ts'
 import { strings } from '../../strings/en.ts'
+import { extraName } from './describe.ts'
 import type { StepProps } from './stepProps.ts'
 import styles from './SteeringThrottleStep.module.css'
 import stepStyles from './steps.module.css'
@@ -102,10 +104,12 @@ interface PortPickerProps {
   value: number
   invalid: boolean
   describedBy: string
+  /** The extras picked on step 4. A port one of them uses cannot be picked here. */
+  extras: readonly ExtraAnswers[]
   onChange: (port: number) => void
 }
 
-function PortPicker({ label, value, invalid, describedBy, onChange }: PortPickerProps) {
+function PortPicker({ label, value, invalid, describedBy, extras, onChange }: PortPickerProps) {
   const id = useId()
   return (
     <div className={styles.port}>
@@ -118,11 +122,14 @@ function PortPicker({ label, value, invalid, describedBy, onChange }: PortPicker
         aria-invalid={invalid ? true : undefined}
         aria-describedby={describedBy}
       >
-        {RECEIVER_PORTS.map((port) => (
-          <option key={port} value={port}>
-            {text.port(port)}
-          </option>
-        ))}
+        {RECEIVER_PORTS.map((port) => {
+          const user = extras.find((extra) => extra.port === port)
+          return (
+            <option key={port} value={port} disabled={user !== undefined}>
+              {user ? text.portTaken(port, extraName(user)) : text.port(port)}
+            </option>
+          )
+        })}
       </select>
     </div>
   )
@@ -140,7 +147,7 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
     <div className={stepStyles.step}>
       <section className={styles.section} aria-labelledby={steeringId}>
         <h2 id={steeringId}>{text.steering}</h2>
-        <Setting label={text.steeringDirection} help={text.steeringDirectionHelp}>
+        <Setting label={text.steeringDirection} help={text.steeringDirectionHelp(draft.vehicleKind)}>
           {(ids) => (
             <PickOne
               ids={ids}
@@ -151,7 +158,7 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
             />
           )}
         </Setting>
-        <Setting label={text.travel} help={text.travelHelp}>
+        <Setting label={text.travel(draft.vehicleKind)} help={text.travelHelp}>
           {(ids) => (
             <PercentSlider
               ids={ids}
@@ -165,7 +172,7 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
 
       <section className={styles.section} aria-labelledby={throttleId}>
         <h2 id={throttleId}>{text.throttle}</h2>
-        <Setting label={text.throttleDirection} help={text.throttleDirectionHelp}>
+        <Setting label={text.throttleDirection} help={text.throttleDirectionHelp(draft.vehicleKind)}>
           {(ids) => (
             <PickOne
               ids={ids}
@@ -226,6 +233,7 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
                 label={text.steeringPort}
                 value={draft.steeringPort}
                 invalid={samePort}
+                extras={draft.extras}
                 describedBy={`${portsHelpId} ${portsProblemId}`}
                 onChange={(steeringPort) => onChange({ steeringPort })}
               />
@@ -233,6 +241,7 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
                 label={text.throttlePort}
                 value={draft.throttlePort}
                 invalid={samePort}
+                extras={draft.extras}
                 describedBy={`${portsHelpId} ${portsProblemId}`}
                 onChange={(throttlePort) => onChange({ throttlePort })}
               />

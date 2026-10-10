@@ -43,6 +43,26 @@
   background: var(--color-accent-soft);
 }
 
+/*
+ * A model that was just added: marked for a moment, then the mark fades. For people who ask for
+ * less motion nothing fades; the mark just stays until it is taken away.
+ */
+.row[data-new] {
+  background: var(--color-accent-soft);
+  animation: fade-mark 3s ease-in forwards;
+}
+
+@keyframes fade-mark {
+  0%,
+  70% {
+    background: var(--color-accent-soft);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
 /* The model the radio is set to: a bar down the left edge, plus the words in the row. */
 .row[data-current]::before {
   content: '';

@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from 'react'
+import { useEffect, useState, type DragEvent } from 'react'
 import { Button, ButtonLink } from '../../components/Button.tsx'
 import { CheckIcon, GripIcon, PlusIcon } from '../../components/icons.tsx'
 import { MT12 } from '../../domain/catalog.ts'
@@ -8,9 +8,12 @@ import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './ModelList.module.css'
 import { tagsFor } from './modelTags.ts'
-import { rowId } from './rowId.ts'
+import { rowId, scrollToRow } from './rowId.ts'
 
 const text = strings.models
+
+// How long a newly added row stays marked.
+const NEW_ROW_MARK_MS = 3000
 
 /** A row being dragged: the position it started in, and the position the pointer is over. */
 interface Drag {
@@ -57,12 +60,14 @@ function Handle({ position, title, onDragStart, onDragEnd }: HandleProps) {
 interface ModelRowProps extends Draggable {
   model: Model
   isCurrent: boolean
+  /** True for a model that was just added, which is marked for a moment. */
+  isNew: boolean
   onCopy: () => void
   onMove: () => void
   onDelete: () => void
 }
 
-function ModelRow({ model, isCurrent, onCopy, onMove, onDelete, ...drag }: ModelRowProps) {
+function ModelRow({ model, isCurrent, isNew, onCopy, onMove, onDelete, ...drag }: ModelRowProps) {
   const tags = tagsFor(model)
 
   return (
@@ -71,6 +76,7 @@ function ModelRow({ model, isCurrent, onCopy, onMove, onDelete, ...drag }: Model
       className={styles.row}
       tabIndex={-1}
       data-current={isCurrent || undefined}
+      data-new={isNew || undefined}
       data-dragging={drag.isDragging || undefined}
       data-drop={drag.dropSide}
       onDragOver={drag.onDragOver}
@@ -196,6 +202,10 @@ interface ModelListProps {
   onCloseUp: () => void
   /** Opens the wizard to add a model in an empty place. */
   onAddAt: (position: number) => void
+  /** A model that was just added. The list scrolls to its row and marks it for a moment. */
+  newModelId: ModelId | null
+  /** Called once the mark has been shown for long enough. */
+  onNewModelMarked: () => void
 }
 
 /**
@@ -215,8 +225,17 @@ export function ModelList({
   onDelete,
   onCloseUp,
   onAddAt,
+  newModelId,
+  onNewModelMarked,
 }: ModelListProps) {
   const [drag, setDrag] = useState<Drag | null>(null)
+
+  useEffect(() => {
+    if (!newModelId) return
+    scrollToRow(newModelId)
+    const timer = window.setTimeout(onNewModelMarked, NEW_ROW_MARK_MS)
+    return () => window.clearTimeout(timer)
+  }, [newModelId, onNewModelMarked])
 
   const inPlace = new Map(models.map((model) => [model.position, model]))
   const last = lastTakenPosition(models)
@@ -280,6 +299,7 @@ export function ModelList({
                 key={model.id}
                 model={model}
                 isCurrent={model.id === currentModelId}
+                isNew={model.id === newModelId}
                 {...draggable(position, model.name)}
                 onCopy={() => onCopy(model.id)}
                 onMove={() => onMoveRequested(position)}

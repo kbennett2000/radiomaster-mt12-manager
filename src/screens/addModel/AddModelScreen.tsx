@@ -3,6 +3,7 @@ import { Button } from '../../components/Button.tsx'
 import { Dialog, DialogActions } from '../../components/Dialog.tsx'
 import { BackIcon, CheckIcon, PlusIcon } from '../../components/icons.tsx'
 import type { Model } from '../../domain/model.ts'
+import type { BaseFitting } from '../../domain/radio.ts'
 import type { Action } from '../../state/appState.ts'
 import { goTo, paths, redirectTo } from '../../state/useHashRoute.ts'
 import {
@@ -21,6 +22,7 @@ import {
 import { strings } from '../../strings/en.ts'
 import styles from './AddModelScreen.module.css'
 import { NameStep } from './NameStep.tsx'
+import { ExtrasStep } from './ExtrasStep.tsx'
 import { ReceiverStep } from './ReceiverStep.tsx'
 import { ReviewStep } from './ReviewStep.tsx'
 import { SteeringThrottleStep } from './SteeringThrottleStep.tsx'
@@ -32,6 +34,8 @@ interface AddModelScreenProps {
   step: BuiltStepId
   /** The models already on the radio. Nothing here changes them. */
   models: readonly Model[]
+  /** What is fitted on the base of the radio, which decides the controls on offer. */
+  baseFitting: BaseFitting | null
   dispatch: Dispatch<Action>
   /** True when the person has started to leave, so the leave question should be asked. */
   leaving: boolean
@@ -47,6 +51,7 @@ const stepScreens: Record<BuiltStepId, (props: StepProps) => React.ReactNode> = 
   name: NameStep,
   receiver: ReceiverStep,
   steeringThrottle: SteeringThrottleStep,
+  extras: ExtrasStep,
   review: ReviewStep,
 }
 
@@ -97,6 +102,7 @@ export function AddModelScreen({
   wizard,
   step,
   models,
+  baseFitting,
   dispatch,
   leaving,
   onKeepGoing,
@@ -113,11 +119,6 @@ export function AddModelScreen({
     dispatch({ type: 'wizardStepTried', step: blocking })
     redirectTo(paths.addStep(blocking))
   }, [blocking, dispatch])
-
-  // Each step starts at the top of the page.
-  useEffect(() => {
-    document.documentElement.scrollTop = 0
-  }, [shown])
 
   const before = stepBefore(shown)
   const after = stepAfter(shown)
@@ -151,11 +152,15 @@ export function AddModelScreen({
             problems={problems}
             tried={wizard.tried.includes(shown)}
             namesInUse={models.map((model) => model.name)}
+            baseFitting={baseFitting}
             onChange={(draft) => dispatch({ type: 'wizardChanged', draft })}
             onViewChange={(view) => dispatch({ type: 'wizardChanged', view })}
+            onExtraPicked={(kind) => dispatch({ type: 'wizardExtraPicked', kind })}
+            onExtraRemoved={(id) => dispatch({ type: 'wizardExtraRemoved', id })}
+            onExtraChanged={(id, answers) => dispatch({ type: 'wizardExtraChanged', id, answers })}
           />
 
-          <div className={styles.actions}>
+          <div className={styles.actions} data-sticks-to-window>
             {/* Back from the first step leaves the wizard, so it asks first, like every other way out. */}
             <Button icon={<BackIcon />} onClick={() => goTo(before ? paths.addStep(before) : paths.home)}>
               {text.back}

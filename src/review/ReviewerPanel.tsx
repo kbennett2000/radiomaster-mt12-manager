@@ -35,7 +35,7 @@ export function ReviewerPanel() {
         <p>{text.about}</p>
         <div className={styles.groups}>
           {SCENARIO_GROUPS.map((group) => (
-            <section key={group}>
+            <section key={group} data-group={group}>
               <h2 className={styles.group}>{text.groups[group]}</h2>
               <ul className={styles.links}>
                 {SCENARIOS.filter((scenario) => scenario.group === group).map((scenario) => (

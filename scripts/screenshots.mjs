@@ -5,8 +5,8 @@
 // It serves the built site, reads the list of states from the reviewer panel, and saves the states
 // that are new or changed in this cycle, at two window sizes:
 //
-//   docs/screenshots/cycle-03/        at 1440x900
-//   docs/screenshots/cycle-03-1024/   at 1024x768
+//   docs/screenshots/cycle-04/        at 1440x900
+//   docs/screenshots/cycle-04-1024/   at 1024x768
 //
 // A page taller than the window also gets a "-full" picture of the whole page. It only ever
 // writes into those two folders. Pictures from earlier cycles are left alone.
@@ -23,12 +23,14 @@ import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// The groups of states that are new or changed in this cycle. Connect and Finish are not.
-const GROUPS = ['models', 'delete', 'wizard']
+// The states that are new or changed in this cycle: the whole "Add a model" wizard, and the list
+// of 20 models, which shows a renamed tag and is the page the height check measures.
+const GROUPS = ['wizard']
+const ALSO = ['models-20']
 
 const SETS = [
-  { dir: 'docs/screenshots/cycle-03', width: 1440, height: 900 },
-  { dir: 'docs/screenshots/cycle-03-1024', width: 1024, height: 768 },
+  { dir: 'docs/screenshots/cycle-04', width: 1440, height: 900 },
+  { dir: 'docs/screenshots/cycle-04-1024', width: 1024, height: 768 },
 ]
 
 // The 20 sample models must fit in about one and a half windows at 1440x900,
@@ -129,7 +131,7 @@ async function saveSet(browser, baseUrl, set) {
   let saved = 0
 
   for (const scenario of numbered) {
-    if (!GROUPS.includes(scenario.group)) continue
+    if (!GROUPS.includes(scenario.group) && !ALSO.includes(scenario.id)) continue
     await page.goto(new URL(scenario.href, baseUrl).href)
     await settle(page)
     await check(page, scenario.name, set.width)
@@ -140,7 +142,10 @@ async function saveSet(browser, baseUrl, set) {
     const dialogOpen = await page.evaluate(() => Boolean(document.querySelector('dialog[open]')))
     if (pageHeight > set.height && !dialogOpen) {
       // The reviewer tab is pinned to the window, so it has no true place in a whole-page picture.
-      await page.addStyleTag({ content: '[data-review-panel] { visibility: hidden }' })
+      // Neither does a bar that sticks to the bottom of the window: it is shown where it ends up.
+      await page.addStyleTag({
+        content: '[data-review-panel] { visibility: hidden } [data-sticks-to-window] { position: static }',
+      })
       await page.screenshot({ path: path.join(outDir, `${scenario.name}-full.png`), fullPage: true })
     }
 

@@ -88,6 +88,7 @@
   --tag-height: 1.625rem;
   --picture-width: 13rem;
   --picture-width-small: 6.5rem;
+  --choice-min-width: 20rem;
   --dialog-width: 34rem;
   --name-field-width: 30rem;
   --wizard-steps-width: 15rem;
@@ -98,5 +99,6 @@
   --receiver-brand-width: 7.5rem;
   --setting-words-width: 25rem;
   --setting-control-width: 19rem;
+  --review-label-width: 12rem;
   --review-panel-width: 80rem;
 }

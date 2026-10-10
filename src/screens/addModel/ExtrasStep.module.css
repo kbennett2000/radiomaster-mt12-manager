@@ -1,0 +1,180 @@
+/* The extras: one white surface, one line per extra, divided by hairlines. */
+
+.list {
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.item,
+.addAnother {
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.item:first-child {
+  border-top: none;
+}
+
+.addAnother {
+  padding: var(--space-3) var(--space-5);
+}
+
+/* The tick box, the name and the one plain sentence. The whole line can be clicked. */
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  cursor: pointer;
+}
+
+.head:hover {
+  background: var(--color-page);
+}
+
+.item:first-child .head {
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+}
+
+.check {
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: var(--space-1) 0 0;
+  accent-color: var(--color-accent);
+}
+
+.titles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+}
+
+.name {
+  font-weight: var(--weight-bold);
+}
+
+.item[data-picked] .name {
+  color: var(--color-accent-strong);
+}
+
+.common {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.about {
+  color: var(--color-text-muted);
+}
+
+/* A picked extra's detail lines up under its name, clear of the tick box. */
+.questions,
+.summary {
+  margin: 0 var(--space-5) var(--space-4) calc(var(--space-5) + var(--icon-size) + var(--space-3));
+}
+
+/* The questions for the extra being answered. */
+.questions {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-medium);
+  background: var(--color-page);
+}
+
+.controlBlock {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* How it will work, in one sentence. */
+.how {
+  font-weight: var(--weight-medium);
+}
+
+.how:empty {
+  display: none;
+}
+
+.swap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.swap .check {
+  margin: 0;
+}
+
+.fieldLabel {
+  display: block;
+  font-weight: var(--weight-bold);
+}
+
+.hint {
+  color: var(--color-text-muted);
+}
+
+.nameField {
+  width: 100%;
+  max-width: var(--name-field-width);
+  min-height: var(--control-height);
+  margin-top: var(--space-3);
+  padding: 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  font-size: var(--text-large);
+}
+
+.nameField[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.below {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: var(--name-field-width);
+  margin-top: var(--space-2);
+}
+
+.count {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.over {
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+/* An answered extra, folded down to one line. */
+.summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.summaryWords {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  min-width: 0;
+}
+
+.facts {
+  font-weight: var(--weight-medium);
+}
+
+.sentences,
+.unfinished {
+  color: var(--color-text-muted);
+}

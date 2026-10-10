@@ -18,6 +18,7 @@ const stepSlugs: Record<BuiltStepId, string> = {
   name: 'name',
   receiver: 'receiver',
   steeringThrottle: 'steering-throttle',
+  extras: 'extras',
   review: 'review',
 }
 

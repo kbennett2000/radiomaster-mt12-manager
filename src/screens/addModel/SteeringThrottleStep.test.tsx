@@ -18,6 +18,6 @@ test('Step 3 has steering and throttle settings, and starts a crawler on Gentle'
   const feel = within(main.getByRole('radiogroup', { name: text.feel }))
   expect((feel.getByRole('radio', { name: text.feels.gentle }) as HTMLInputElement).checked).toBe(true)
 
-  expect((main.getByRole('slider', { name: text.travel }) as HTMLInputElement).value).toBe('100')
+  expect((main.getByRole('slider', { name: text.travel('crawler') }) as HTMLInputElement).value).toBe('100')
   expect((main.getByRole('slider', { name: text.topSpeed }) as HTMLInputElement).value).toBe('100')
 })

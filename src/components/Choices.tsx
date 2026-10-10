@@ -7,8 +7,12 @@ import styles from './Choices.module.css'
 interface Choice<Value extends string> {
   value: Value
   label: string
+  /** A few quieter words on the same line as the label, such as the kind of control. */
+  note?: string
   /** A few plain words under the label. */
   description?: string
+  /** Set when the choice cannot be picked. It says why, in place of the note. */
+  unavailable?: string
 }
 
 interface PictureChoice<Value extends string> extends Choice<Value> {
@@ -46,10 +50,11 @@ function Frame({ question, size, help, problem, children }: FrameProps) {
           {help}
         </p>
       )}
-      {children}
+      {/* Said right under the question, so it is seen even when the choices run past the window. */}
       <p className={styles.problem} role="alert">
         {problem ?? null}
       </p>
+      {children}
     </fieldset>
   )
 }
@@ -94,7 +99,12 @@ export function PictureChoices<Value extends string>({
   )
 }
 
-/** A question whose choices are words only. 'row' sets short choices side by side. */
+const wordLayouts = { row: styles.wordsRow, stack: styles.wordsStack, grid: styles.wordsGrid }
+
+/**
+ * A question whose choices are words only. 'row' sets short choices side by side, 'stack' sets
+ * them one under another, and 'grid' fits as many columns as there is room for.
+ */
 export function RadioChoices<Value extends string>({
   question,
   size = 'main',
@@ -104,27 +114,34 @@ export function RadioChoices<Value extends string>({
   onChange,
   problem,
   layout = 'stack',
-}: QuestionProps<Value> & { options: readonly Choice<Value>[]; layout?: 'row' | 'stack' }) {
+}: QuestionProps<Value> & { options: readonly Choice<Value>[]; layout?: 'row' | 'stack' | 'grid' }) {
   const groupName = useId()
   return (
     <Frame question={question} size={size} help={help} problem={problem}>
-      <div className={layout === 'row' ? styles.wordsRow : styles.wordsStack}>
-        {options.map((option) => (
-          <label key={option.value} className={`${styles.card} ${styles.wordCard}`}>
-            <span className={styles.choice}>
-              <input
-                type="radio"
-                className={styles.radio}
-                name={groupName}
-                value={option.value}
-                checked={value === option.value}
-                onChange={() => onChange(option.value)}
-              />
-              <span className={styles.wordLabel}>{option.label}</span>
-            </span>
-            {option.description && <span className={styles.wordDescription}>{option.description}</span>}
-          </label>
-        ))}
+      <div className={wordLayouts[layout]}>
+        {options.map((option) => {
+          const beside = option.unavailable ?? option.note
+          return (
+            <label key={option.value} className={`${styles.card} ${styles.wordCard}`}>
+              <span className={styles.choice}>
+                <input
+                  type="radio"
+                  className={styles.radio}
+                  name={groupName}
+                  value={option.value}
+                  checked={value === option.value}
+                  disabled={option.unavailable !== undefined}
+                  onChange={() => onChange(option.value)}
+                />
+                <span>
+                  <span className={styles.wordLabel}>{option.label}</span>
+                  {beside && <span className={styles.wordNote}> · {beside}</span>}
+                </span>
+              </span>
+              {option.description && <span className={styles.wordDescription}>{option.description}</span>}
+            </label>
+          )
+        })}
       </div>
     </Frame>
   )

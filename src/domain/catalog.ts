@@ -2,29 +2,44 @@
 // Supporting another radio module (ELRS is next) means adding an entry here, not changing logic elsewhere.
 // Display names for everything in this file live in the strings file, keyed by id.
 
-import type { BaseFitting, RadioDefinition } from './radio.ts'
+import type {
+  BaseFitting,
+  ControlDefinition,
+  ControlId,
+  ControlKind,
+  RadioDefinition,
+  ReceiverTypeDefinition,
+} from './radio.ts'
 
 export const MT12 = {
   id: 'mt12',
   maxModels: 60,
   maxModelNameLength: 10,
   receiverPorts: 8,
+  firstExtraPort: 3,
   steeringTravel: { min: 50, max: 120, standard: 100 },
   topSpeed: { min: 30, max: 100, standard: 100 },
+  // The order here is the order controls are listed in: by where they sit on the radio.
   controls: [
-    { id: 'wheel', type: 'wheel' },
-    { id: 'trigger', type: 'trigger' },
-    { id: 'SA', type: 'switch' },
-    { id: 'SB', type: 'switch' },
-    { id: 'SC', type: 'switch' },
-    { id: 'SD', type: 'switch' },
-    { id: 'P1', type: 'dial' },
-    { id: 'P2', type: 'dial' },
-    { id: 'T1', type: 'buttons' },
-    { id: 'T2', type: 'buttons' },
-    { id: 'T3', type: 'buttons' },
-    { id: 'T4', type: 'buttons' },
-    { id: 'T5', type: 'buttons' },
+    { id: 'wheel', kind: 'wheel' },
+    { id: 'trigger', kind: 'trigger' },
+    { id: 'SA', kind: 'switch3' },
+    { id: 'SB', kind: 'pushButton' },
+    { id: 'SC', kind: 'pushButton' },
+    { id: 'SD', kind: 'pushButton' },
+    { id: 'P1', kind: 'dial' },
+    { id: 'P2', kind: 'dial' },
+    { id: 'T1', kind: 'buttonPair' },
+    { id: 'T2', kind: 'buttonPair' },
+    { id: 'T3', kind: 'buttonPair' },
+    { id: 'T4', kind: 'buttonPair' },
+    { id: 'T5', kind: 'buttonPair' },
+    // The controls a base fitting adds. Their names and kinds are placeholders: I have not checked
+    // them against a real radio with these fitted.
+    { id: 'baseSwitchLeft', kind: 'switch2', fitting: 'twoSwitches' },
+    { id: 'baseSwitchRight', kind: 'switch2', fitting: 'twoSwitches' },
+    { id: 'joystickLeftRight', kind: 'dial', fitting: 'joystick' },
+    { id: 'joystickUpDown', kind: 'dial', fitting: 'joystick' },
   ],
   baseFittings: ['blankCover', 'twoSwitches', 'joystick'],
   modules: [
@@ -33,9 +48,9 @@ export const MT12 = {
       // uses to pick it. What the label on the receiver says is in the strings file.
       id: 'internal-4in1',
       receiverTypes: [
-        { id: 'dumborc-x', brand: 'dumborc', moduleNumbers: [74, 2] },
-        { id: 'dumborc-p', brand: 'dumborc', moduleNumbers: [74, 4] },
-        { id: 'radiolink', brand: 'radiolink', moduleNumbers: [74, 0] },
+        { id: 'dumborc-x', brand: 'dumborc', gyroGainPort: 8, moduleNumbers: [74, 2] },
+        { id: 'dumborc-p', brand: 'dumborc', gyroGainPort: 8, moduleNumbers: [74, 4] },
+        { id: 'radiolink', brand: 'radiolink', gyroGainPort: 8, moduleNumbers: [74, 0] },
         { id: 'radiolink-r4eh', brand: 'radiolink', moduleNumbers: [74, 3] },
         { id: 'spektrum-dsmr', brand: 'spektrum', moduleNumbers: [6, 5] },
         { id: 'spektrum-dsm2', brand: 'spektrum', moduleNumbers: [6, 6] },
@@ -68,6 +83,28 @@ export type BrandId = (typeof MT12.modules)[number]['receiverTypes'][number]['br
 
 /** Every receiver type the radio's module offers, in the order they are listed. */
 export const RECEIVER_TYPES = MT12.modules.flatMap((module) => module.receiverTypes)
+
+/** The port this receiver type expects gyro gain on, or null when any port will do. */
+export function gyroGainPortFor(receiverTypeId: ReceiverTypeId | null): number | null {
+  const receiver: ReceiverTypeDefinition | undefined = RECEIVER_TYPES.find((type) => type.id === receiverTypeId)
+  return receiver?.gyroGainPort ?? null
+}
+
+/** The controls a radio really has: the ones every MT12 has, plus those its base fitting adds. */
+export const controlsFor = (baseFitting: BaseFitting | null): readonly ControlDefinition[] =>
+  MT12.controls.filter(
+    (control: ControlDefinition) => control.fitting === undefined || control.fitting === baseFitting,
+  )
+
+/** What kind of control this is. */
+export const controlKind = (id: ControlId): ControlKind =>
+  MT12.controls.find((control) => control.id === id)?.kind ?? 'pushButton'
+
+/** The receiver ports offered for extras: every port from the first one after steering and throttle. */
+export const EXTRA_PORTS: readonly number[] = Array.from(
+  { length: MT12.receiverPorts - MT12.firstExtraPort + 1 },
+  (_, index) => MT12.firstExtraPort + index,
+)
 
 /** The receiver ports the app offers, counted from 1 as printed on the receiver's case. */
 export const RECEIVER_PORTS: readonly number[] = Array.from({ length: MT12.receiverPorts }, (_, index) => index + 1)
