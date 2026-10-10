@@ -1,0 +1,91 @@
+/* Page-wide basics. Every value comes from theme.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: var(--weight-normal);
+  line-height: var(--line-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--line-heading);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: var(--text-heading-1);
+}
+
+h2 {
+  font-size: var(--text-heading-2);
+}
+
+h3 {
+  font-size: var(--text-heading-3);
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--color-accent-strong);
+  text-underline-offset: 0.2em;
+}
+
+/* One focus style everywhere, visible on every surface. */
+:focus-visible {
+  outline: var(--focus-ring) solid var(--color-focus);
+  outline-offset: var(--focus-ring);
+}
+
+/* Headings and status messages that receive focus from code should not show a ring. */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
+/* For people who ask their computer for less motion: nothing slides, fades or spins. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

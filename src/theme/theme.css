@@ -1,0 +1,84 @@
+/*
+ * The theme: every colour, spacing step and type size the app uses.
+ * Component styles read these custom properties and never set their own values for them.
+ * Light theme only for now.
+ */
+
+:root {
+  /* Colour: surfaces */
+  --color-page: #f6f4ee;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #efece4;
+  --color-border: #dcd7ca;
+  --color-border-strong: #8f897b;
+
+  /* Colour: text */
+  --color-text: #1f2a2c;
+  --color-text-muted: #515c5b;
+
+  /* Colour: the one accent, used sparingly */
+  --color-accent: #1f6f6b;
+  --color-accent-strong: #175652;
+  --color-accent-soft: #e2efed;
+  --color-on-accent: #ffffff;
+
+  /* Colour: destructive actions and problems only */
+  --color-danger: #a3352b;
+  --color-danger-strong: #842a22;
+  --color-danger-soft: #f8e8e5;
+  --color-on-danger: #ffffff;
+
+  /* Colour: keyboard focus, and the shade behind a dialog */
+  --color-focus: #1f2a2c;
+  --color-backdrop: rgb(31 42 44 / 45%);
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* Type */
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --text-body: 1rem;
+  --text-large: 1.125rem;
+  --text-heading-3: 1.25rem;
+  --text-heading-2: 1.5rem;
+  --text-heading-1: 2.25rem;
+  /* Words inside a line drawing. Measured in the drawing's own units, so it scales with the drawing. */
+  --text-drawing-label: 13px;
+  --line-body: 1.55;
+  --line-heading: 1.2;
+  --weight-normal: 400;
+  --weight-medium: 550;
+  --weight-bold: 700;
+
+  /* Shape */
+  --radius-small: 0.5rem;
+  --radius-medium: 0.875rem;
+  --radius-large: 1.25rem;
+  --radius-pill: 999px;
+  --border-thin: 1px;
+  --border-thick: 2px;
+  --focus-ring: 3px;
+
+  /* Depth */
+  --shadow-card: 0 1px 2px rgb(31 42 44 / 6%), 0 6px 20px rgb(31 42 44 / 5%);
+  --shadow-raised: 0 2px 6px rgb(31 42 44 / 10%), 0 20px 48px rgb(31 42 44 / 18%);
+
+  /* Sizes */
+  --content-width: 75rem;
+  --reading-width: 42rem;
+  --control-height: 3rem;
+  --control-height-large: 3.5rem;
+  --icon-size: 1.25rem;
+  --card-min-width: 21rem;
+  --picture-width: 13rem;
+  --dialog-width: 34rem;
+  --review-panel-width: 60rem;
+}

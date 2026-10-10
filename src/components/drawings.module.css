@@ -1,0 +1,87 @@
+.drawing {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--color-text);
+}
+
+.line,
+.thin,
+.body,
+.sunken,
+.accentLine,
+.accentSoft,
+.accentDashed,
+.lever {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.line {
+  fill: none;
+  stroke: currentColor;
+}
+
+.thin {
+  fill: none;
+  stroke: var(--color-border-strong);
+}
+
+.body {
+  fill: var(--color-surface);
+  stroke: currentColor;
+}
+
+.sunken {
+  fill: var(--color-surface-sunken);
+  stroke: currentColor;
+}
+
+.accentLine {
+  fill: none;
+  stroke: var(--color-accent);
+}
+
+.accentSoft {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent);
+}
+
+.accentDashed {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-dasharray: 2 7;
+}
+
+.accentFill {
+  fill: var(--color-accent);
+}
+
+.accentDot {
+  fill: var(--color-accent);
+}
+
+.dot {
+  fill: var(--color-border-strong);
+}
+
+.lever {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 6;
+}
+
+.pointer {
+  fill: var(--color-text);
+  stroke: var(--color-surface);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.onAccentText {
+  fill: var(--color-on-accent);
+  font-family: var(--font-body);
+  font-size: var(--text-drawing-label);
+  font-weight: var(--weight-medium);
+}

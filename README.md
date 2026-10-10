@@ -16,7 +16,8 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173.
+Then open http://localhost:5173. The tab on the right edge marked "For reviewers only" jumps to every state of
+the mockups.
 
 ## License
 
