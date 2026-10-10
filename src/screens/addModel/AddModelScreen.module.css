@@ -1,0 +1,110 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-5);
+}
+
+/* Where the model will go. Said quietly on every step. */
+.where {
+  color: var(--color-text-muted);
+}
+
+/* The steps down the left, the step being answered on the right. */
+.columns {
+  display: grid;
+  grid-template-columns: var(--wizard-steps-width) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-7);
+}
+
+.progress {
+  position: sticky;
+  top: var(--space-5);
+}
+
+.steps {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  line-height: var(--space-6);
+}
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border: var(--border-thick) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.stepName {
+  display: block;
+}
+
+.stepItem[data-standing='current'] {
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+}
+
+.stepItem[data-standing='current'] .badge {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.stepItem[data-standing='done'] {
+  color: var(--color-text);
+}
+
+.stepItem[data-standing='done'] .badge {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.stepItem[data-standing='later'] .badge {
+  border-style: dashed;
+}
+
+/* "Coming next", under the name of a step that is not built yet. */
+.later {
+  display: block;
+  line-height: var(--line-heading);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.cancel {
+  margin-left: auto;
+  padding: var(--space-2) 0;
+  color: var(--color-text-muted);
+}

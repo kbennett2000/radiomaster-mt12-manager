@@ -85,3 +85,7 @@
   font-size: var(--text-drawing-label);
   font-weight: var(--weight-medium);
 }
+
+.dotStrong {
+  fill: currentColor;
+}

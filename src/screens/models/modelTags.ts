@@ -14,6 +14,7 @@ function tagFor(feature: Feature): string | null {
     case 'steering':
       return null
     case 'throttle':
+      if (feature.feel === 'gentle') return strings.tags.gentleThrottle
       return feature.feel === 'custom' ? strings.tags.customThrottleFeel : null
     case 'oneButtonPreset':
       return strings.features.oneButtonPreset(feature.name)

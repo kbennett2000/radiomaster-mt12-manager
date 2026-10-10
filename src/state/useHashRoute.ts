@@ -3,18 +3,28 @@
 
 import { useMemo, useSyncExternalStore } from 'react'
 import type { ModelId } from '../domain/model.ts'
+import { BUILT_STEPS, type BuiltStepId } from './wizard.ts'
 
 export type Route =
   | { name: 'home' }
-  | { name: 'addModel' }
+  | { name: 'addModel'; step: BuiltStepId }
   | { name: 'editModel'; modelId: ModelId }
   | { name: 'radioSetup' }
   | { name: 'finish' }
   | { name: 'openFiles' }
 
+/** The part of the address that names each wizard step. */
+const stepSlugs: Record<BuiltStepId, string> = {
+  name: 'name',
+  receiver: 'receiver',
+  steeringThrottle: 'steering-throttle',
+  review: 'review',
+}
+
 export const paths = {
   home: '#/',
-  addModel: '#/models/add',
+  /** Each step of the "Add a model" wizard has its own address, so the browser's Back steps through them. */
+  addStep: (step: BuiltStepId) => `#/models/add/${stepSlugs[step]}`,
   editModel: (modelId: ModelId) => `#/models/${encodeURIComponent(modelId)}/edit`,
   radioSetup: '#/radio-setup',
   finish: '#/finish',
@@ -23,7 +33,8 @@ export const paths = {
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, '')
-  if (path === '/models/add') return { name: 'addModel' }
+  const add = /^\/models\/add(?:\/([^/]*))?$/.exec(path)
+  if (add) return { name: 'addModel', step: BUILT_STEPS.find((step) => stepSlugs[step] === add[1]) ?? 'name' }
   if (path === '/radio-setup') return { name: 'radioSetup' }
   if (path === '/finish') return { name: 'finish' }
   if (path === '/open-files') return { name: 'openFiles' }
@@ -34,6 +45,11 @@ export function parseRoute(hash: string): Route {
 
 export function goTo(path: string): void {
   window.location.hash = path
+}
+
+/** Goes to a page without leaving the current one in the browser's history. */
+export function redirectTo(path: string): void {
+  window.location.replace(path)
 }
 
 function subscribe(onChange: () => void): () => void {

@@ -8,10 +8,11 @@ import type { Model, ModelId } from '../domain/model.ts'
 import type { BaseFitting } from '../domain/radio.ts'
 import { initialState, reducer, type Action, type AppState } from './appState.ts'
 import { paths } from './useHashRoute.ts'
+import type { BuiltStepId, ModelDraft, WizardView } from './wizard.ts'
 
-export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'finish'
+export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'wizard' | 'finish'
 
-export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'finish']
+export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'wizard', 'finish']
 
 export const SCENARIO_IDS = [
   'connect-first-visit',
@@ -35,7 +36,6 @@ export const SCENARIO_IDS = [
   'models-moved',
   'models-dragged',
   'models-edit-coming-next',
-  'models-add-coming-next',
   'models-radio-setup',
   'delete-confirm',
   'delete-confirm-leave-empty',
@@ -46,6 +46,19 @@ export const SCENARIO_IDS = [
   'delete-done-left-empty',
   'delete-restored',
   'delete-restored-empty-place',
+  'wizard-name-empty',
+  'wizard-name-too-long',
+  'wizard-receiver',
+  'wizard-receiver-search',
+  'wizard-receiver-no-match',
+  'wizard-receiver-picked',
+  'wizard-receiver-cant-find',
+  'wizard-steering-car',
+  'wizard-steering-crawler',
+  'wizard-steering-more-options',
+  'wizard-review',
+  'wizard-leave',
+  'wizard-added',
   'finish-and-unplug',
   'finish-disconnected',
 ] as const
@@ -90,6 +103,26 @@ const leavingPlacesEmpty: AppState = { ...ready(), whenDeleting: 'leaveEmpty' }
 
 // A radio that arrived with empty places already in its list: positions 8, 11 and 14 hold nothing.
 const arrivedWithGaps = ready(SAMPLE_MODELS.filter((model) => ![8, 11, 14].includes(model.position)))
+
+/** The wizard, opened from "Add a model", on a step, with some answers already given. */
+const wizardOn = (step: BuiltStepId, draft: Partial<ModelDraft> = {}, view: Partial<WizardView> = {}): AppState =>
+  after(
+    ready(),
+    { type: 'wizardOpened' },
+    { type: 'wizardChanged', draft, view },
+    { type: 'wizardStepShown', step },
+  )
+
+/** One wizard scenario: the page for a step, with the wizard already on that step. */
+const wizardScenario = (
+  step: BuiltStepId,
+  draft: Partial<ModelDraft> = {},
+  view: Partial<WizardView> = {},
+): Omit<Scenario, 'id'> => ({ group: 'wizard', path: paths.addStep(step), state: wizardOn(step, draft, view) })
+
+// Answers for a crawler called Bouncer, as far as each step needs them.
+const named: Partial<ModelDraft> = { name: 'Bouncer', vehicleKind: 'crawler' }
+const withReceiver: Partial<ModelDraft> = { ...named, receiverTypeId: 'dumborc-x' }
 
 const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
@@ -160,7 +193,6 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
     state: after(ready(), { type: 'placeMoved', fromPosition: 20, toPosition: 2 }),
   },
   'models-edit-coming-next': { group: 'models', path: paths.editModel('m03'), state: ready() },
-  'models-add-coming-next': { group: 'models', path: paths.addModel, state: ready() },
   'models-radio-setup': {
     group: 'models',
     path: paths.radioSetup,
@@ -216,6 +248,29 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
       { type: 'deleteConfirmed', modelId: 'm11' },
       { type: 'restoreRequested', modelId: 'm11' },
     ),
+  },
+
+  'wizard-name-empty': wizardScenario('name'),
+  'wizard-name-too-long': wizardScenario('name', { name: 'Rock Bouncer' }),
+  'wizard-receiver': wizardScenario('receiver', named),
+  'wizard-receiver-search': wizardScenario('receiver', named, { search: 'spek' }),
+  'wizard-receiver-no-match': wizardScenario('receiver', named, { search: 'tamiya' }),
+  'wizard-receiver-picked': wizardScenario('receiver', withReceiver),
+  'wizard-receiver-cant-find': wizardScenario('receiver', named, { cantFindOpen: true }),
+  'wizard-steering-car': wizardScenario('steeringThrottle', {
+    name: 'Rally',
+    vehicleKind: 'carOrTruck',
+    receiverTypeId: 'spektrum-dsmr',
+  }),
+  'wizard-steering-crawler': wizardScenario('steeringThrottle', withReceiver),
+  'wizard-steering-more-options': wizardScenario('steeringThrottle', withReceiver, { moreOptionsOpen: true }),
+  'wizard-review': wizardScenario('review', withReceiver),
+  // The address has moved off the wizard while it is open, which is what every way of leaving does.
+  'wizard-leave': { group: 'wizard', path: paths.home, state: wizardOn('receiver', withReceiver) },
+  'wizard-added': {
+    group: 'wizard',
+    path: paths.home,
+    state: after(wizardOn('review', withReceiver), { type: 'wizardFinished' }),
   },
 
   'finish-and-unplug': { group: 'finish', path: paths.finish, state: ready() },

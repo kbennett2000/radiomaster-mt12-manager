@@ -23,16 +23,28 @@ interface WorkedOnRadio {
   control: ControlId
 }
 
+/** Which way a control drives what it is plugged into. 'reversed' swaps the two ways round. */
+export type Direction = 'normal' | 'reversed'
+
 export interface SteeringFeature extends WorkedThroughPort {
   kind: 'steering'
+  direction: Direction
+  /** How far the wheels turn, as a percentage. See MT12.steeringTravel for the range. */
+  travel: number
 }
 
-export type ThrottleFeel = 'standard' | 'custom'
+/**
+ * How the trigger responds. 'gentle' makes the first part of the trigger less sensitive.
+ * 'custom' is a shape the owner made themselves, which the app can show but not yet edit.
+ */
+export type ThrottleFeel = 'standard' | 'gentle' | 'custom'
 
 export interface ThrottleFeature extends WorkedThroughPort {
   kind: 'throttle'
-  /** 'custom' when the owner has reshaped how the trigger responds. */
+  direction: Direction
   feel: ThrottleFeel
+  /** The most throttle the trigger can ask for, as a percentage. See MT12.topSpeed for the range. */
+  topSpeed: number
 }
 
 export interface TwoSpeedTransmissionFeature extends WorkedThroughPort {

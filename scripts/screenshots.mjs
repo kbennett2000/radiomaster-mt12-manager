@@ -24,7 +24,7 @@ import { preview } from 'vite'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 // The groups of states that are new or changed in this cycle. Connect and Finish are not.
-const GROUPS = ['models', 'delete']
+const GROUPS = ['models', 'delete', 'wizard']
 
 const SETS = [
   { dir: 'docs/screenshots/cycle-03', width: 1440, height: 900 },

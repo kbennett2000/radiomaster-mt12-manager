@@ -139,10 +139,12 @@ function ModelRow({ model, isCurrent, onCopy, onMove, onDelete, ...drag }: Model
 interface EmptyRowProps extends Draggable {
   position: number
   onMove: () => void
+  /** Opens the wizard to add a model in this place. */
+  onAdd: () => void
 }
 
 /** An empty place with a model somewhere after it. It can be dragged and moved like a model. */
-function EmptyRow({ position, onMove, ...drag }: EmptyRowProps) {
+function EmptyRow({ position, onMove, onAdd, ...drag }: EmptyRowProps) {
   return (
     <li
       className={styles.emptyRow}
@@ -162,9 +164,13 @@ function EmptyRow({ position, onMove, ...drag }: EmptyRowProps) {
         <ButtonLink
           variant="quiet"
           size="small"
-          href={paths.addModel}
+          href={paths.addStep('name')}
           icon={<PlusIcon />}
           aria-label={text.addHereNamed(position)}
+          onClick={(event) => {
+            event.preventDefault()
+            onAdd()
+          }}
         >
           {text.addHere}
         </ButtonLink>
@@ -188,6 +194,8 @@ interface ModelListProps {
   onDelete: (modelId: ModelId) => void
   /** Removes every empty place that has a model after it. */
   onCloseUp: () => void
+  /** Opens the wizard to add a model in an empty place. */
+  onAddAt: (position: number) => void
 }
 
 /**
@@ -206,6 +214,7 @@ export function ModelList({
   onMoved,
   onDelete,
   onCloseUp,
+  onAddAt,
 }: ModelListProps) {
   const [drag, setDrag] = useState<Drag | null>(null)
 
@@ -282,6 +291,7 @@ export function ModelList({
                 position={position}
                 {...draggable(position, text.emptyPlace)}
                 onMove={() => onMoveRequested(position)}
+                onAdd={() => onAddAt(position)}
               />
             )
           })}

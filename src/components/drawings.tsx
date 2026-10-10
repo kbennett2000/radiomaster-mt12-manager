@@ -116,3 +116,61 @@ export function BaseFittingDrawing({ fitting }: { fitting: BaseFitting }) {
     </Drawing>
   )
 }
+
+/** The four kinds of vehicle the "Add a model" wizard asks about. The names are only keys here. */
+export function VehicleKindDrawing({ kind }: { kind: 'carOrTruck' | 'crawler' | 'boat' | 'other' }) {
+  return (
+    <Drawing viewBox="0 0 200 120">
+      {kind === 'carOrTruck' && (
+        <>
+          {/* a low body with a cabin, and two wheels */}
+          <path
+            className={styles.body}
+            d="M18 86V72c0-5 3-8 8-9l26-5 18-19c3-3 7-5 11-5h38c5 0 9 2 12 5l16 19 24 4c5 1 8 5 8 10v14z"
+          />
+          <path className={styles.sunken} d="M68 58l13-14c2-2 4-3 7-3h28c3 0 5 1 7 3l11 14z" />
+          <circle className={styles.body} cx="60" cy="88" r="16" />
+          <circle className={styles.accentSoft} cx="60" cy="88" r="5" />
+          <circle className={styles.body} cx="142" cy="88" r="16" />
+          <circle className={styles.accentSoft} cx="142" cy="88" r="5" />
+        </>
+      )}
+      {kind === 'crawler' && (
+        <>
+          {/* a boxy cab riding high on big tyres, with a rock under the front one */}
+          <path className={styles.line} d="M126 112l14-12 20 2 16 10" />
+          <path
+            className={styles.body}
+            d="M38 62V38c0-4 3-7 7-7h56c3 0 6 1 8 4l14 17h30c4 0 7 3 7 7v3z"
+          />
+          <path className={styles.sunken} d="M58 52V42h38l8 10z" />
+          <path className={styles.line} d="M50 62l6 14M150 62l-6 12" />
+          <circle className={styles.body} cx="56" cy="88" r="22" />
+          <circle className={styles.accentSoft} cx="56" cy="88" r="8" />
+          <circle className={styles.body} cx="146" cy="82" r="22" />
+          <circle className={styles.accentSoft} cx="146" cy="82" r="8" />
+        </>
+      )}
+      {kind === 'boat' && (
+        <>
+          {/* a hull with a small cabin, on the water */}
+          <rect className={styles.sunken} x="76" y="38" width="46" height="26" rx="5" />
+          <path className={styles.line} d="M122 52h14" />
+          <path className={styles.body} d="M22 64h156l-20 30H48z" />
+          <path
+            className={styles.accentLine}
+            d="M14 106c10-8 20-8 30 0s20 8 30 0 20-8 30 0 20 8 30 0 20-8 30 0 20 8 30 0"
+          />
+        </>
+      )}
+      {kind === 'other' && (
+        <>
+          {/* an empty outline with a question mark: anything that is not one of the others */}
+          <rect className={styles.accentDashed} x="34" y="18" width="132" height="84" rx="18" />
+          <path className={styles.line} d="M86 50c0-9 7-15 15-15s15 6 15 14c0 12-15 11-15 24" />
+          <circle className={styles.dotStrong} cx="101" cy="86" r="3.5" />
+        </>
+      )}
+    </Drawing>
+  )
+}
