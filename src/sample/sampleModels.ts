@@ -31,22 +31,26 @@ const throttlePresets = (control: ControlId): Feature => ({ kind: 'throttlePrese
 const hornSound = (control: ControlId): Feature => ({ kind: 'hornSound', control })
 const oneButtonPreset = (name: string, control: ControlId): Feature => ({ kind: 'oneButtonPreset', name, control })
 
+/** The id of the sample model that starts in a position: m01 for position 1, and so on. */
+const sampleId = (position: number): ModelId => `m${String(position).padStart(2, '0')}`
+
 function model(
-  id: ModelId,
+  position: number,
   name: string,
   receiverTypeId: ReceiverTypeId,
   extras: readonly Feature[] = [],
   feedback: readonly FeedbackKind[] = [],
   basics: readonly Feature[] = [steering, throttle],
 ): Model {
-  return { id, name, receiverTypeId, features: [...basics, ...extras], feedback }
+  return { id: sampleId(position), position, name, receiverTypeId, features: [...basics, ...extras], feedback }
 }
 
+// The radio's list as the sample starts: 20 models in positions 1 to 20, and positions 21 to 60 empty.
 export const SAMPLE_MODELS: readonly Model[] = [
-  model('m01', 'Wraith', 'spektrum-dsmr'),
-  model('m02', 'TRX-4m 4s', 'frsky-d8', [lights('SA', 3), cruiseControl('SC', 'P1')], ['vibration']),
+  model(1, 'Wraith', 'spektrum-dsmr'),
+  model(2, 'TRX-4m 4s', 'frsky-d8', [lights('SA', 3), cruiseControl('SC', 'P1')], ['vibration']),
   model(
-    'm03',
+    3,
     'TRX-4',
     'spektrum-dsmr',
     [
@@ -60,15 +64,15 @@ export const SAMPLE_MODELS: readonly Model[] = [
     ['voiceCallouts', 'vibration', 'ledColour'],
   ),
   model(
-    'm04',
+    4,
     'TRX4-Tow',
     'dumborc-x',
     [twoSpeed('SA', 3), lights('SB', 6), cruiseControl('SC', 'P1'), gyroGain('P2', 8)],
     ['beeps', 'vibration'],
   ),
-  model('m05', 'TRX-4m Tow', 'traxxas-tq', [twoSpeed('SA', 3)]),
+  model(5, 'TRX-4m Tow', 'traxxas-tq', [twoSpeed('SA', 3)]),
   model(
-    'm06',
+    6,
     'TRX-4 2-2',
     'dumborc-x',
     [
@@ -83,7 +87,7 @@ export const SAMPLE_MODELS: readonly Model[] = [
     ['beeps', 'vibration'],
   ),
   model(
-    'm07',
+    7,
     'Summit',
     'dumborc-x',
     [
@@ -95,25 +99,25 @@ export const SAMPLE_MODELS: readonly Model[] = [
     ],
     ['beeps', 'vibration'],
   ),
-  model('m08', 'Slash 2WD', 'dumborc-x', [throttleArming('SC'), gyroGain('P2', 8), hornSound('SB')]),
-  model('m09', 'Tarantula', 'spektrum-dsmr', [], [], [steering, throttleWithCustomFeel]),
-  model('m10', 'Slash 4x4', 'dumborc-x', [gyroGain('P2', 8)]),
-  model('m11', 'Micro B', 'spektrum-slt'),
-  model('m12', 'SCX30', 'spektrum-slt', [], [], [steering, throttleWithCustomFeel]),
-  model('m13', 'EMB-MT', 'dumborc-x', [gyroGain('P1', 8)]),
-  model('m14', 'MojaveGrom', 'spektrum-slt'),
-  model('m15', 'MojaveGrm2', 'spektrum-slt'),
-  model('m16', 'SC10b', 'dumborc-x', [gyroGain('P2', 8)]),
-  model('m17', 'Maxx', 'dumborc-x', [gyroGain('P1', 8)]),
-  model('m18', 'Airboat', 'dumborc-x', [throttlePresets('SA'), customExtra('Port 8 dial', 'P1', 8)]),
-  model('m19', 'Hyper SSE', 'spektrum-dsmr', [hornSound('SD')]),
-  model('m20', 'Mini 8ight', 'dumborc-x', [gyroGain('P2', 8)]),
+  model(8, 'Slash 2WD', 'dumborc-x', [throttleArming('SC'), gyroGain('P2', 8), hornSound('SB')]),
+  model(9, 'Tarantula', 'spektrum-dsmr', [], [], [steering, throttleWithCustomFeel]),
+  model(10, 'Slash 4x4', 'dumborc-x', [gyroGain('P2', 8)]),
+  model(11, 'Micro B', 'spektrum-slt'),
+  model(12, 'SCX30', 'spektrum-slt', [], [], [steering, throttleWithCustomFeel]),
+  model(13, 'EMB-MT', 'dumborc-x', [gyroGain('P1', 8)]),
+  model(14, 'MojaveGrom', 'spektrum-slt'),
+  model(15, 'MojaveGrm2', 'spektrum-slt'),
+  model(16, 'SC10b', 'dumborc-x', [gyroGain('P2', 8)]),
+  model(17, 'Maxx', 'dumborc-x', [gyroGain('P1', 8)]),
+  model(18, 'Airboat', 'dumborc-x', [throttlePresets('SA'), customExtra('Port 8 dial', 'P1', 8)]),
+  model(19, 'Hyper SSE', 'spektrum-dsmr', [hornSound('SD')]),
+  model(20, 'Mini 8ight', 'dumborc-x', [gyroGain('P2', 8)]),
 ]
 
-/** The model the sample radio is currently set to: model 20, Mini 8ight. */
-export const SAMPLE_CURRENT_MODEL_ID: ModelId = 'm20'
+/** The model the sample radio is currently set to: Mini 8ight, in position 20. */
+export const SAMPLE_CURRENT_MODEL_ID: ModelId = sampleId(20)
 
 /** A plain steering-and-throttle model, used to fill the radio up for the "60 of 60" state. */
-export function spareModel(number: number): Model {
-  return model(`m${String(number).padStart(2, '0')}`, `Spare ${number}`, 'spektrum-slt')
+export function spareModel(position: number): Model {
+  return model(position, `Spare ${position}`, 'spektrum-slt')
 }

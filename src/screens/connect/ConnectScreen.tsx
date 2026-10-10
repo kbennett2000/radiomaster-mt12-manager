@@ -64,6 +64,12 @@ export function ConnectScreen({ state, onConnect, onBaseFittingAnswered }: Conne
 
   return (
     <div className={styles.page}>
+      {state.justDisconnected && (
+        <p className={styles.connected} role="status">
+          <CheckIcon />
+          <span>{text.disconnected}</span>
+        </p>
+      )}
       <h1>{text.title}</h1>
       {wrongFolder ? (
         <div className={styles.problem} role="alert">
@@ -90,7 +96,7 @@ export function ConnectScreen({ state, onConnect, onBaseFittingAnswered }: Conne
                 {index + 1}
               </span>
               <span>
-                <span className={styles.srOnly}>{text.stepNumber(index + 1)}: </span>
+                <span className="visually-hidden">{text.stepNumber(index + 1)}: </span>
                 {step.title}
               </span>
             </h2>

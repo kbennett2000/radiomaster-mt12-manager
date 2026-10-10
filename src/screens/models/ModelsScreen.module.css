@@ -1,14 +1,19 @@
 .page {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-5);
   min-height: var(--control-height-large);
+}
+
+/* Takes the room between the title and the Add action. */
+.hint {
+  flex: 1;
+  color: var(--color-text-muted);
 }
 
 .full {
@@ -18,14 +23,15 @@
   font-weight: var(--weight-medium);
 }
 
-.notice:empty {
-  display: none;
+/* The confirmation stays at the top of the window, so a change made far down the list is still confirmed in view. */
+.notice {
+  position: sticky;
+  top: var(--space-3);
+  z-index: 5;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
-  gap: var(--space-5);
+.notice:empty {
+  display: none;
 }
 
 .empty {

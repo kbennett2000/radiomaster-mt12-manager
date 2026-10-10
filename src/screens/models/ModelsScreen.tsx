@@ -8,8 +8,10 @@ import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import { DeleteDialog } from '../delete/DeleteDialog.tsx'
 import { CopyDialog } from './CopyDialog.tsx'
-import { ModelCard } from './ModelCard.tsx'
+import { CurrentModelStrip } from './CurrentModelStrip.tsx'
+import { ModelList } from './ModelList.tsx'
 import styles from './ModelsScreen.module.css'
+import { MoveDialog } from './MoveDialog.tsx'
 import { RadioFullDialog } from './RadioFullDialog.tsx'
 import { RecentlyDeleted } from './RecentlyDeleted.tsx'
 
@@ -51,14 +53,21 @@ function ChangeNotice({ state, dispatch }: ModelsScreenProps) {
     )
   }
 
+  let words: string
+  if (notice.kind === 'restored' && notice.position !== notice.wantedPosition) {
+    words = strings.notice.restoredElsewhere(notice.modelName, notice.wantedPosition, notice.position)
+  } else {
+    words = strings.notice[notice.kind](notice.modelName, notice.position)
+  }
+
   return (
     <Notice
       title={strings.notice.savedTitle}
       announceKey={notice}
       actions={
         <>
-          {notice.kind === 'deleted' && (
-            <Button icon={<UndoIcon />} onClick={() => dispatch({ type: 'deleteUndone' })}>
+          {(notice.kind === 'deleted' || notice.kind === 'moved') && (
+            <Button icon={<UndoIcon />} onClick={() => dispatch({ type: 'changeUndone' })}>
               {strings.notice.undo}
             </Button>
           )}
@@ -66,7 +75,7 @@ function ChangeNotice({ state, dispatch }: ModelsScreenProps) {
         </>
       }
     >
-      {strings.notice[notice.kind](notice.modelName)} {strings.notice.safeToUnplug}
+      {words}
     </Notice>
   )
 }
@@ -92,6 +101,18 @@ function OpenDialog({ state, dispatch }: ModelsScreenProps) {
     )
   }
 
+  if (dialog.type === 'move') {
+    return (
+      <MoveDialog
+        model={model}
+        models={state.models}
+        toPosition={dialog.toPosition}
+        onConfirm={(toPosition) => dispatch({ type: 'modelMoved', modelId: model.id, toPosition })}
+        onCancel={close}
+      />
+    )
+  }
+
   const isCurrent = state.currentModelId === model.id
   return (
     <DeleteDialog
@@ -108,12 +129,14 @@ function OpenDialog({ state, dispatch }: ModelsScreenProps) {
 export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
   const full = isRadioFull(state)
   const empty = state.models.length === 0
+  const current = state.models.find((model) => model.id === state.currentModelId)
   const explainFull = () => dispatch({ type: 'addRequestedWhileFull' })
 
   return (
     <div className={styles.page}>
       <div className={styles.top}>
         <h1>{text.title}</h1>
+        {!empty && <p className={styles.hint}>{text.reorderHint}</p>}
         {!empty && <AddModelAction full={full} onFull={explainFull} />}
       </div>
 
@@ -130,17 +153,17 @@ export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
           <AddModelAction full={full} onFull={explainFull} />
         </div>
       ) : (
-        <ul className={styles.grid}>
-          {state.models.map((model) => (
-            <ModelCard
-              key={model.id}
-              model={model}
-              isCurrent={model.id === state.currentModelId}
-              onCopy={() => dispatch({ type: 'copyRequested', modelId: model.id })}
-              onDelete={() => dispatch({ type: 'deleteRequested', modelId: model.id })}
-            />
-          ))}
-        </ul>
+        <>
+          {current && <CurrentModelStrip model={current} />}
+          <ModelList
+            models={state.models}
+            currentModelId={state.currentModelId}
+            onCopy={(modelId) => dispatch({ type: 'copyRequested', modelId })}
+            onMoveRequested={(modelId) => dispatch({ type: 'moveRequested', modelId })}
+            onMoved={(modelId, toPosition) => dispatch({ type: 'modelMoved', modelId, toPosition })}
+            onDelete={(modelId) => dispatch({ type: 'deleteRequested', modelId })}
+          />
+        </>
       )}
 
       {state.recentlyDeleted.length > 0 && (

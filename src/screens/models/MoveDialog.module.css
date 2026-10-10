@@ -1,0 +1,36 @@
+.label {
+  display: block;
+  margin-top: var(--space-4);
+  font-weight: var(--weight-bold);
+}
+
+.select {
+  width: 100%;
+  min-height: var(--control-height);
+  margin-top: var(--space-3);
+  padding: 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+}
+
+.select[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+/* What the move will do. It keeps its height as the choice changes, so the buttons stay put. */
+.effect {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-height: var(--space-9);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-sunken);
+}
+
+.problem {
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}

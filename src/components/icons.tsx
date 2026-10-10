@@ -100,6 +100,25 @@ export const CloseIcon = () => (
   </Icon>
 )
 
+export const GripIcon = () => (
+  <Icon>
+    <path d="M9 5.5v1M15 5.5v1M9 11.5v1M15 11.5v1M9 17.5v1M15 17.5v1" strokeWidth="2.6" />
+  </Icon>
+)
+
+export const EjectIcon = () => (
+  <Icon>
+    <path d="M12 5l7 9H5l7-9z" />
+    <path d="M5 19h14" />
+  </Icon>
+)
+
+export const DownIcon = () => (
+  <Icon>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Icon>
+)
+
 export const SpinnerIcon = () => (
   <Icon spin>
     <path d="M12 3a9 9 0 1 0 9 9" />

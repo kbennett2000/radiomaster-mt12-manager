@@ -15,9 +15,11 @@
 
 .brand {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: var(--space-3);
   margin-right: auto;
+  white-space: nowrap;
   color: var(--color-text);
   font-size: var(--text-large);
   font-weight: var(--weight-bold);
@@ -32,9 +34,19 @@
   color: var(--color-on-accent);
 }
 
+/* On a narrow window this is the part that gives: it wraps onto two lines. */
 .status {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
   color: var(--color-text-muted);
+  line-height: var(--line-heading);
+  text-wrap: balance;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
 }

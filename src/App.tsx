@@ -5,6 +5,7 @@ import { MT12 } from './domain/catalog.ts'
 import { ReviewerPanel } from './review/ReviewerPanel.tsx'
 import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from './sample/sampleModels.ts'
 import { ConnectScreen } from './screens/connect/ConnectScreen.tsx'
+import { FinishScreen } from './screens/finish/FinishScreen.tsx'
 import { ModelsScreen } from './screens/models/ModelsScreen.tsx'
 import { ComingNextScreen } from './screens/placeholder/ComingNextScreen.tsx'
 import { RadioSetupScreen } from './screens/radioSetup/RadioSetupScreen.tsx'
@@ -62,6 +63,15 @@ function App({ initialState }: { initialState: AppState }) {
         title={text.edit.title(modelToEdit.name)}
         body={text.edit.body}
         backLabel={text.backToModels}
+      />
+    )
+  } else if (route.name === 'finish') {
+    screen = (
+      <FinishScreen
+        onUnplugged={() => {
+          dispatch({ type: 'disconnected' })
+          goTo(paths.home)
+        }}
       />
     )
   } else if (route.name === 'radioSetup') {

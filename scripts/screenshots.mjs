@@ -2,12 +2,16 @@
 //
 //   npm run screenshots
 //
-// It serves the built site, reads the list of states from the reviewer panel, and saves one PNG per
-// state at 1440x900 into docs/screenshots/cycle-01/. A page taller than the window also gets a
-// "-full" picture of the whole page. The script fails if a banned word shows up, a page overflows
-// sideways, or the page reports an error.
+// It serves the built site, reads the list of states from the reviewer panel, and saves two sets:
 //
-// SCREENSHOT_WIDTH and SCREENSHOT_DIR change the window width and where the pictures go.
+//   docs/screenshots/cycle-02/        every state at 1440x900
+//   docs/screenshots/cycle-02-1024/   the states that show the list of models, at 1024x768
+//
+// A page taller than the window also gets a "-full" picture of the whole page. Pictures from
+// earlier cycles are left alone.
+//
+// The script fails if a banned word shows up, a page overflows sideways, the page reports an
+// error, or the list of 20 models grows taller than its target.
 
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -16,9 +20,14 @@ import { chromium } from 'playwright'
 import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const outDir = path.resolve(root, process.env.SCREENSHOT_DIR ?? 'docs/screenshots/cycle-01')
-const width = Number(process.env.SCREENSHOT_WIDTH ?? 1440)
-const height = 900
+
+const SETS = [
+  { dir: 'docs/screenshots/cycle-02', width: 1440, height: 900, groups: null, panel: true },
+  { dir: 'docs/screenshots/cycle-02-1024', width: 1024, height: 768, groups: ['models', 'delete'], panel: false },
+]
+
+// The 20 sample models must fit in about one and a half windows at 1440x900.
+const DENSITY = { state: 'models-20', width: 1440, maxWindows: 1.5 }
 
 // Words the app must never show. See src/strings/en.ts.
 const BANNED = [
@@ -46,10 +55,9 @@ function readWords() {
 }
 
 const problems = []
-let number = 0
-const nextName = (id) => `${String(++number).padStart(2, '0')}-${id}`
+const notes = []
 
-async function check(page, name) {
+async function check(page, name, width) {
   const words = await page.evaluate(readWords)
   for (const match of words.matchAll(bannedPattern)) {
     problems.push(`${name}: the banned word "${match[0]}" is on the page`)
@@ -66,18 +74,15 @@ async function settle(page) {
   await page.waitForTimeout(150)
 }
 
-await mkdir(outDir, { recursive: true })
-for (const file of await readdir(outDir)) {
-  if (file.endsWith('.png')) await rm(path.join(outDir, file))
-}
+async function saveSet(browser, baseUrl, set) {
+  const outDir = path.resolve(root, set.dir)
+  await mkdir(outDir, { recursive: true })
+  for (const file of await readdir(outDir)) {
+    if (file.endsWith('.png')) await rm(path.join(outDir, file))
+  }
 
-const server = await preview({ root, logLevel: 'silent', preview: { host: '127.0.0.1', port: 4173 } })
-const baseUrl = server.resolvedUrls.local[0]
-const browser = await chromium.launch()
-
-try {
   const context = await browser.newContext({
-    viewport: { width, height },
+    viewport: { width: set.width, height: set.height },
     deviceScaleFactor: 1,
     reducedMotion: 'reduce',
   })
@@ -90,43 +95,81 @@ try {
   await page.goto(baseUrl)
   await settle(page)
   const scenarios = await page.$$eval('a[data-review-state]', (links) =>
-    links.map((link) => ({ id: link.dataset.reviewState, href: link.getAttribute('href') })),
+    links.map((link) => ({
+      id: link.dataset.reviewState,
+      group: link.dataset.reviewGroup,
+      href: link.getAttribute('href'),
+    })),
   )
   if (scenarios.length === 0) throw new Error('The reviewer panel lists no states.')
 
-  for (const scenario of scenarios) {
-    const name = nextName(scenario.id)
+  // A state keeps the same number in every set, so the two sets are easy to compare.
+  const numbered = scenarios.map((scenario, index) => ({
+    ...scenario,
+    name: `${String(index + 1).padStart(2, '0')}-${scenario.id}`,
+  }))
+  let saved = 0
+
+  for (const scenario of numbered) {
+    if (set.groups && !set.groups.includes(scenario.group)) continue
     await page.goto(new URL(scenario.href, baseUrl).href)
     await settle(page)
-    await check(page, name)
-    await page.screenshot({ path: path.join(outDir, `${name}.png`) })
+    await check(page, scenario.name, set.width)
+    await page.screenshot({ path: path.join(outDir, `${scenario.name}.png`) })
+    saved++
 
-    const tallerThanWindow = await page.evaluate(
-      () => document.documentElement.scrollHeight > window.innerHeight && !document.querySelector('dialog[open]'),
-    )
-    if (tallerThanWindow) {
-      await page.screenshot({ path: path.join(outDir, `${name}-full.png`), fullPage: true })
+    const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight)
+    const dialogOpen = await page.evaluate(() => Boolean(document.querySelector('dialog[open]')))
+    if (pageHeight > set.height && !dialogOpen) {
+      // The reviewer tab is pinned to the window, so it has no true place in a whole-page picture.
+      await page.addStyleTag({ content: '[data-review-panel] { visibility: hidden }' })
+      await page.screenshot({ path: path.join(outDir, `${scenario.name}-full.png`), fullPage: true })
     }
-    console.log(`saved ${name}${tallerThanWindow ? ' (and -full)' : ''}`)
+
+    if (scenario.id === DENSITY.state && set.width === DENSITY.width) {
+      const windows = pageHeight / set.height
+      notes.push(
+        `The 20-model list is ${pageHeight}px tall at ${set.width}x${set.height}: ${windows.toFixed(2)} windows.`,
+      )
+      if (windows > DENSITY.maxWindows) {
+        problems.push(
+          `${scenario.name}: the page is ${windows.toFixed(2)} windows tall, over the ${DENSITY.maxWindows} target`,
+        )
+      }
+    }
   }
 
-  // The reviewer panel itself, opened.
-  const panelName = nextName('reviewer-panel-open')
-  await page.goto(new URL(scenarios[0].href, baseUrl).href)
-  await settle(page)
-  await page.locator('details > summary').click()
-  await page.waitForTimeout(150)
-  await check(page, panelName)
-  await page.screenshot({ path: path.join(outDir, `${panelName}.png`) })
-  console.log(`saved ${panelName}`)
+  if (set.panel) {
+    // The reviewer panel itself, opened.
+    const name = `${String(numbered.length + 1).padStart(2, '0')}-reviewer-panel-open`
+    await page.goto(new URL(numbered[0].href, baseUrl).href)
+    await settle(page)
+    await page.locator('details > summary').click()
+    await page.waitForTimeout(150)
+    await check(page, name, set.width)
+    await page.screenshot({ path: path.join(outDir, `${name}.png`) })
+    saved++
+  }
+
+  await context.close()
+  console.log(`${set.dir}: ${saved} states at ${set.width}x${set.height}`)
+}
+
+const server = await preview({ root, logLevel: 'silent', preview: { host: '127.0.0.1', port: 4173 } })
+const browser = await chromium.launch()
+
+try {
+  for (const set of SETS) await saveSet(browser, server.resolvedUrls.local[0], set)
 } finally {
   await browser.close()
   await server.close()
 }
+
+for (const note of notes) console.log(note)
 
 if (problems.length > 0) {
   console.error(`\n${problems.length} problem(s) found:`)
   for (const problem of problems) console.error(`  - ${problem}`)
   process.exit(1)
 }
-console.log(`\n${number} states saved to ${path.relative(root, outDir) || outDir} at ${width}x${height}. No banned words, no sideways overflow, no page errors.`)
+console.log('No banned words, no sideways overflow, no page errors.')

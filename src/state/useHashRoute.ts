@@ -9,6 +9,7 @@ export type Route =
   | { name: 'addModel' }
   | { name: 'editModel'; modelId: ModelId }
   | { name: 'radioSetup' }
+  | { name: 'finish' }
   | { name: 'openFiles' }
 
 export const paths = {
@@ -16,6 +17,7 @@ export const paths = {
   addModel: '#/models/add',
   editModel: (modelId: ModelId) => `#/models/${encodeURIComponent(modelId)}/edit`,
   radioSetup: '#/radio-setup',
+  finish: '#/finish',
   openFiles: '#/open-files',
 }
 
@@ -23,6 +25,7 @@ export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, '')
   if (path === '/models/add') return { name: 'addModel' }
   if (path === '/radio-setup') return { name: 'radioSetup' }
+  if (path === '/finish') return { name: 'finish' }
   if (path === '/open-files') return { name: 'openFiles' }
   const edit = /^\/models\/([^/]+)\/edit$/.exec(path)
   if (edit) return { name: 'editModel', modelId: decodeURIComponent(edit[1]) }
