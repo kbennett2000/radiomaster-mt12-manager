@@ -1,0 +1,72 @@
+/* Deliberately plain and dashed, so nobody mistakes it for part of the product. */
+
+/* Closed: a slim tab on the right edge of the window, clear of the page's content. */
+.panel {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 10;
+  transform: translateY(-50%);
+  border: var(--border-thick) dashed var(--color-text);
+  border-right: none;
+  border-radius: var(--radius-medium) 0 0 var(--radius-medium);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.tab {
+  padding: var(--space-4) var(--space-2);
+  font-weight: var(--weight-bold);
+  writing-mode: vertical-rl;
+  cursor: pointer;
+}
+
+/* Open: a wide panel in the bottom right corner with every state in view at once. */
+.panel[open] {
+  top: auto;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: min(var(--review-panel-width), calc(100vw - 2 * var(--space-4)));
+  transform: none;
+  border-right: var(--border-thick) dashed var(--color-text);
+  border-radius: var(--radius-medium);
+}
+
+.panel[open] .tab {
+  padding: var(--space-2) var(--space-4);
+  writing-mode: horizontal-tb;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-4);
+  max-height: calc(100vh - var(--space-9));
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  overflow-y: auto;
+  border-top: var(--border-thin) dashed var(--color-text);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.group {
+  font-size: var(--text-body);
+}
+
+.links {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.links a[aria-current='page'] {
+  font-weight: var(--weight-bold);
+  text-decoration-thickness: var(--border-thick);
+}
+
+.startOver {
+  justify-self: start;
+}
