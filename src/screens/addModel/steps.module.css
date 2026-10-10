@@ -1,0 +1,21 @@
+/* What every step of the wizard shares. */
+
+.step {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.intro {
+  max-width: var(--reading-width);
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.problem {
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.problem:empty {
+  display: none;
+}

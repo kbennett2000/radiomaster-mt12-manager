@@ -67,7 +67,11 @@ export function PictureChoices<Value extends string>({
   const groupName = useId()
   return (
     <Frame question={question} size={size} help={help} problem={problem}>
-      <div className={styles.pictures} style={{ '--choices': options.length } as CSSProperties}>
+      <div
+        className={styles.pictures}
+        data-count={options.length}
+        style={{ '--choices': options.length } as CSSProperties}
+      >
         {options.map((option) => (
           <label key={option.value} className={styles.card}>
             <span className={styles.picture}>{option.picture}</span>

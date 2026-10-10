@@ -1,0 +1,41 @@
+.summary {
+  margin: 0;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+/* One answer: what it is, what was answered, and a way to change it. */
+.row {
+  display: grid;
+  grid-template-columns: var(--receiver-brand-width) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.row:first-child {
+  border-top: none;
+}
+
+.label {
+  color: var(--color-text-muted);
+}
+
+.answer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+  margin: 0;
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.change {
+  margin: 0;
+}
+
+.comingNext {
+  color: var(--color-text-muted);
+}

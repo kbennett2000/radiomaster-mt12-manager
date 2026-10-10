@@ -7,6 +7,7 @@ import type { Model, ModelId } from '../domain/model.ts'
 import {
   closeUpEmptyPlaces,
   describeMove,
+  firstEmptyPosition,
   modelAt,
   modelsAfter,
   movePlace,
@@ -18,6 +19,16 @@ import {
   type WhenDeleting,
 } from '../domain/positions.ts'
 import type { BaseFitting } from '../domain/radio.ts'
+import {
+  modelFrom,
+  newWizard,
+  problemsIn,
+  stepIsFine,
+  type BuiltStepId,
+  type ModelDraft,
+  type WizardState,
+  type WizardView,
+} from './wizard.ts'
 
 export type ConnectionStatus = 'notConnected' | 'connecting' | 'wrongFolder' | 'connected'
 
@@ -41,6 +52,7 @@ export interface Shift {
 }
 
 export type Notice =
+  | { kind: 'added'; modelName: string; position: number }
   | { kind: 'copied'; modelName: string; position: number }
   /** `shift` is null when the model's place was left empty and nothing else moved. */
   | { kind: 'deleted'; modelId: ModelId; modelName: string; position: number; shift: Shift | null; before: Before }
@@ -78,7 +90,9 @@ export interface AppState {
   /** The confirmation shown after the last change. */
   notice: Notice | null
   dialog: OpenDialog | null
-  /** Used to give each copy its own id. */
+  /** The "Add a model" wizard while it is open, with the answers so far. */
+  wizard: WizardState | null
+  /** Used to give each copy and each added model its own id. */
   nextCopyNumber: number
 }
 
@@ -98,6 +112,14 @@ export type Action =
   | { type: 'deleteConfirmed'; modelId: ModelId; switchToId?: ModelId }
   | { type: 'changeUndone' }
   | { type: 'restoreRequested'; modelId: ModelId }
+  /** Opens the wizard. `position` is the empty place it was opened from, if any. */
+  | { type: 'wizardOpened'; position?: number }
+  | { type: 'wizardStepShown'; step: BuiltStepId }
+  | { type: 'wizardChanged'; draft?: Partial<ModelDraft>; view?: Partial<WizardView> }
+  /** The person tried to move on from a step, so anything missing on it should now be pointed out. */
+  | { type: 'wizardStepTried'; step: BuiltStepId }
+  | { type: 'wizardLeft' }
+  | { type: 'wizardFinished' }
   | { type: 'dialogClosed' }
   | { type: 'noticeDismissed' }
 
@@ -114,6 +136,7 @@ export function initialState(browserSupported: boolean): AppState {
     recentlyDeleted: [],
     notice: null,
     dialog: null,
+    wizard: null,
     nextCopyNumber: 1,
   }
 }
@@ -164,7 +187,14 @@ export function reducer(state: AppState, action: Action): AppState {
       }
 
     case 'disconnected':
-      return { ...state, connection: 'notConnected', justDisconnected: true, notice: null, dialog: null }
+      return {
+        ...state,
+        connection: 'notConnected',
+        justDisconnected: true,
+        notice: null,
+        dialog: null,
+        wizard: null,
+      }
 
     case 'baseFittingAnswered':
       return { ...state, radio: { ...state.radio, baseFitting: action.baseFitting } }
@@ -283,6 +313,59 @@ export function reducer(state: AppState, action: Action): AppState {
           position: deleted.position,
           shift: shiftOf(restored.moved, restored.direction),
         },
+      }
+    }
+
+    case 'wizardOpened': {
+      const requested = action.position
+      const position =
+        requested !== undefined && !modelAt(state.models, requested) ? requested : firstEmptyPosition(state.models)
+      if (position === null) return { ...state, dialog: { type: 'radioFull' } }
+      return { ...state, wizard: newWizard(position), notice: null, dialog: null }
+    }
+
+    case 'wizardStepShown':
+      return state.wizard ? { ...state, wizard: { ...state.wizard, step: action.step } } : state
+
+    case 'wizardChanged':
+      if (!state.wizard) return state
+      return {
+        ...state,
+        wizard: {
+          ...state.wizard,
+          draft: { ...state.wizard.draft, ...action.draft },
+          view: { ...state.wizard.view, ...action.view },
+        },
+      }
+
+    case 'wizardStepTried': {
+      const wizard = state.wizard
+      if (!wizard || wizard.tried.includes(action.step)) return state
+      return { ...state, wizard: { ...wizard, tried: [...wizard.tried, action.step] } }
+    }
+
+    case 'wizardLeft':
+      return { ...state, wizard: null }
+
+    case 'wizardFinished': {
+      const wizard = state.wizard
+      if (!wizard) return state
+      const problems = problemsIn(wizard.draft, state.models)
+      const taken = modelAt(state.models, wizard.draft.position)
+      const position = taken ? firstEmptyPosition(state.models) : wizard.draft.position
+      const model =
+        position === null ? null : modelFrom(wizard.draft, `added-${state.nextCopyNumber}`, position)
+      const allFine = stepIsFine('name', problems) && stepIsFine('receiver', problems) && stepIsFine('steeringThrottle', problems)
+      // Nothing is added unless every answer is in. The wizard stays open so the person can fix it.
+      if (!model || !allFine) return state
+      return {
+        ...state,
+        models: placeModel(state.models, model, model.position),
+        // A radio with no models had nothing to be set to, so it is set to the first one added.
+        currentModelId: state.currentModelId ?? model.id,
+        nextCopyNumber: state.nextCopyNumber + 1,
+        notice: { kind: 'added', modelName: model.name, position: model.position },
+        wizard: null,
       }
     }
 

@@ -5,11 +5,12 @@
 // Say "receiver port", "receiver type" and "model" instead.
 
 import { APP_NAME } from '../config/app.ts'
-import type { ReceiverTypeId } from '../domain/catalog.ts'
-import type { FeedbackKind } from '../domain/model.ts'
+import type { BrandId, ReceiverTypeId } from '../domain/catalog.ts'
+import type { Direction, FeedbackKind } from '../domain/model.ts'
 import type { WhenDeleting } from '../domain/positions.ts'
 import type { BaseFitting, ControlId } from '../domain/radio.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
+import type { OfferedThrottleFeel, VehicleKind, WizardStepId } from '../state/wizard.ts'
 
 const RADIO_NAME = 'MT12'
 
@@ -160,6 +161,7 @@ export const strings = {
   // because every model has them.
   tags: {
     noExtras: 'Steering and throttle only',
+    gentleThrottle: 'Gentle throttle',
     customThrottleFeel: 'Custom throttle feel',
     feedback: (kinds: string) => `Radio feedback: ${kinds}`,
   },
@@ -204,27 +206,208 @@ export const strings = {
     T5: 'T5 buttons',
   } satisfies Record<ControlId, string>,
 
-  receiverTypes: {
-    'spektrum-dsmr': 'Spektrum DSMR',
-    'spektrum-slt': 'Spektrum SLT',
-    'frsky-d8': 'FrSky D8',
-    'dumborc-x': 'DumboRC X-series',
-    'traxxas-tq': 'Traxxas TQ',
+  // Receivers. Each one has the brand that makes it, what the label on it (or its box) says,
+  // and the receiver type name the app shows for it.
+  brands: {
+    dumborc: 'DumboRC',
+    radiolink: 'RadioLink',
+    spektrum: 'Spektrum',
+    traxxas: 'Traxxas',
+    frsky: 'FrSky',
+    flysky: 'Flysky',
+    futaba: 'Futaba',
+    kyosho: 'Kyosho',
+    losi: 'Losi',
+    axial: 'Axial',
+    wltoys: 'WLtoys',
+    wpl: 'WPL',
+    kamtom: 'KAMTOM',
+    eazyrc: 'EazyRC',
+    jiabaile: 'JIABAILE',
+  } satisfies Record<BrandId, string>,
+
+  receiverLabels: {
+    'dumborc-x': 'X6, X6F, X6FG, X6DC, X6DCG, X10F, X10FG',
+    'dumborc-p': 'P6F, P6FG, P6DC, P6DCG, P6FP, P10F, P10FG',
+    radiolink: 'R7FG, R6FG, R6F, R8EF, R8FM, R8F, R4FGM, R4F',
+    'radiolink-r4eh': 'R4EH-G, R4EH-H',
+    'spektrum-dsmr': 'DSMR receivers for cars and trucks',
+    'spektrum-dsm2': 'DSM2 receivers for cars and trucks, such as SR3100',
+    'spektrum-slt': 'SLT receivers: SPMXSE2825RX, SPMXSBER1025G, SPMXSE4510RX',
+    'traxxas-tq': 'TQ 2.4GHz receivers 6519, 2218, 2218X, ECM-2.5',
+    'traxxas-tq-2217': 'Receiver 2217',
+    'frsky-d8': 'D4R, D8R',
+    'frsky-d16': 'X4R, X6R, X8R',
+    'flysky-afhds2a': 'AFHDS 2A receivers',
+    'flysky-bs': 'FS-BS4, FS-BS6',
+    'futaba-sfhss': 'S-FHSS receivers',
+    'kyosho-fhss': 'Mini-Z FHSS (KT-531P), Syncro KR-331',
+    'kyosho-asf': 'Mini-Z ASF',
+    losi: 'Vehicles that came with the LSR-3000 transmitter',
+    'axial-scx24': 'SCX24: Deadbolt, Jeep Wrangler Rubicon, Chevrolet C10, B-17 Betty',
+    wltoys: 'Cars 284131, 284161, 284010, 124016, 124017, 144010',
+    'wltoys-v8': 'Cars 284019A, 284191 (V8 transmitter)',
+    wpl: 'D12, D12KM, D22, D32, D42, D14',
+    kamtom: 'KM24xx, Pinecone SG-24xx',
+    eazyrc: 'EazyRC cars',
+    jiabaile: 'JBL-430x 1:43 cars',
   } satisfies Record<ReceiverTypeId, string>,
+
+  receiverTypes: {
+    'dumborc-x': 'DumboRC X-series',
+    'dumborc-p': 'DumboRC P-series',
+    radiolink: 'RadioLink',
+    'radiolink-r4eh': 'RadioLink R4EH',
+    'spektrum-dsmr': 'Spektrum DSMR',
+    'spektrum-dsm2': 'Spektrum DSM2',
+    'spektrum-slt': 'Spektrum SLT',
+    'traxxas-tq': 'Traxxas TQ',
+    'traxxas-tq-2217': 'Traxxas TQ (2217)',
+    'frsky-d8': 'FrSky D8',
+    'frsky-d16': 'FrSky D16',
+    'flysky-afhds2a': 'Flysky AFHDS 2A',
+    'flysky-bs': 'Flysky BS4/BS6',
+    'futaba-sfhss': 'Futaba S-FHSS',
+    'kyosho-fhss': 'Kyosho FHSS',
+    'kyosho-asf': 'Kyosho ASF',
+    losi: 'Losi',
+    'axial-scx24': 'Axial SCX24',
+    wltoys: 'WLtoys',
+    'wltoys-v8': 'WLtoys V8',
+    wpl: 'WPL',
+    kamtom: 'KAMTOM',
+    eazyrc: 'EazyRC',
+    jiabaile: 'JIABAILE',
+  } satisfies Record<ReceiverTypeId, string>,
+
+  // The rules every model name follows, shared by Copy and by the "Add a model" wizard.
+  modelName: {
+    hint: (max: number) => `Up to ${max} characters.`,
+    count: (used: number, max: number) => `${used} of ${max} characters`,
+    tooLong: (used: number, max: number) =>
+      `That name is ${used} characters long. Your radio allows ${max} at most.`,
+    alreadyUsed: 'Another model already has that name. Choose a different one.',
+  },
 
   copy: {
     title: (name: string) => `Copy ${name}`,
     nameLabel: 'Name for the copy',
-    nameHint: (max: number) => `Up to ${max} characters.`,
-    count: (used: number, max: number) => `${used} of ${max} characters`,
-    problems: {
-      empty: 'Type a name for the copy.',
-      tooLong: (used: number, max: number) =>
-        `That name is ${used} characters long. Your radio allows ${max} at most.`,
-      alreadyUsed: 'Another model already has that name. Choose a different one.',
-    },
+    nameEmpty: 'Type a name for the copy.',
     confirm: 'Copy model',
     cancel: 'Cancel',
+  },
+
+  // The "Add a model" wizard. One question at a time, for someone who may never have set up a radio.
+  addModel: {
+    title: 'Add a model',
+    goesIn: (position: number) => `It will go in position ${position}.`,
+    stepsLabel: 'Steps',
+    stepNames: {
+      name: 'Name',
+      receiver: 'Receiver',
+      steeringThrottle: 'Steering and throttle',
+      extras: 'Extras',
+      feedback: 'Feedback',
+      review: 'Review',
+      bind: 'Bind your receiver',
+    } satisfies Record<WizardStepId, string>,
+    comingNext: 'Coming next',
+    done: 'Done',
+    back: 'Back',
+    next: 'Next',
+    cancel: 'Cancel',
+
+    name: {
+      question: 'What do you want to call it?',
+      help: 'This is the name your radio shows on its screen.',
+      empty: 'Type a name for your model.',
+      kindQuestion: 'What kind of vehicle is it?',
+      kindHelp: 'This only helps the app suggest settings. You can change everything later.',
+      kindMissing: 'Choose the kind of vehicle to carry on.',
+      kinds: {
+        carOrTruck: 'Car or truck',
+        crawler: 'Crawler or trail truck',
+        boat: 'Boat',
+        other: 'Something else',
+      } satisfies Record<VehicleKind, string>,
+    },
+
+    receiver: {
+      question: 'Which receiver is in your vehicle?',
+      intro:
+        'The receiver is the small box in your vehicle that listens to your radio. Look for the brand and model number printed on it.',
+      searchLabel: 'Type the brand or the model number',
+      listLabel: 'Receivers',
+      // How many receivers the list holds right now. Most of them are below the edge of its frame.
+      count: (shown: number, all: number) => {
+        if (shown === all) return `${all} receivers. Scroll the list to see them all.`
+        return shown === 1 ? '1 receiver matches.' : `${shown} receivers match.`
+      },
+      picked: (name: string) => `You picked ${name}.`,
+      nothingMatches: (typed: string) =>
+        `Nothing matches “${typed}”. Check the spelling, or try just the brand.`,
+      missing: 'Choose your receiver from the list to carry on.',
+      cantFind: 'I can’t find my receiver',
+      cantFindTitle: 'More help is coming next',
+      cantFindBody:
+        'For now the app only knows the receivers in this list. More help with finding yours is coming next.',
+      cantFindClose: 'Close',
+    },
+
+    steeringThrottle: {
+      steering: 'Steering',
+      throttle: 'Throttle',
+      steeringDirection: 'Steering direction',
+      steeringDirectionHelp:
+        'You can’t test this until your radio is unplugged. If the wheels turn the wrong way, come back and switch it.',
+      throttleDirection: 'Throttle direction',
+      throttleDirectionHelp:
+        'You can’t test this until your radio is unplugged. If the vehicle goes backwards when you pull the trigger, come back and switch it.',
+      directions: { normal: 'Normal', reversed: 'Reversed' } satisfies Record<Direction, string>,
+      travel: 'How far the wheels turn',
+      travelHelp: 'Lower this if the steering strains at full lock.',
+      feel: 'Throttle feel',
+      feelHelp:
+        'Gentle makes the first part of the trigger less sensitive. Good for crawling and slow driving.',
+      feels: { standard: 'Standard', gentle: 'Gentle' } satisfies Record<OfferedThrottleFeel, string>,
+      topSpeed: 'Top speed limit',
+      topSpeedHelp: 'Lower this for a new driver.',
+      percent: (value: number) => `${value}%`,
+      moreOptions: 'More options',
+      ports: 'Receiver ports',
+      portsHelp: 'Almost every vehicle uses port 1 for steering and port 2 for throttle.',
+      steeringPort: 'Steering port',
+      throttlePort: 'Throttle port',
+      port: (port: number) => `Port ${port}`,
+      samePort: (port: number) =>
+        `Steering and throttle can’t both use port ${port}. Choose a different port for one of them.`,
+    },
+
+    review: {
+      title: 'Check it over',
+      rows: {
+        name: 'Name',
+        position: 'Position',
+        receiver: 'Receiver',
+        steering: 'Steering',
+        throttle: 'Throttle',
+      },
+      change: 'Change',
+      changeNamed: (what: string) => `Change ${what.toLowerCase()}`,
+      direction: { normal: 'Normal direction', reversed: 'Reversed direction' } satisfies Record<Direction, string>,
+      travel: (value: number) => `Wheels turn ${value}%`,
+      feel: { standard: 'Standard feel', gentle: 'Gentle feel' } satisfies Record<OfferedThrottleFeel, string>,
+      topSpeed: (value: number) => `Top speed limit ${value}%`,
+      comingNext: 'Extras, radio feedback and binding are coming next.',
+      confirm: 'Add to my radio',
+    },
+
+    leave: {
+      title: 'Leave without adding this model?',
+      body: 'The answers you have given so far will be lost.',
+      keepGoing: 'Keep going',
+      leave: 'Leave',
+    },
   },
 
   moveModel: {
@@ -282,7 +465,7 @@ export const strings = {
 
   notice: {
     savedTitle: 'Saved to your radio',
-    copied: (name: string, position: number) => `“${name}” was added in position ${position}.`,
+    added: (name: string, position: number) => `“${name}” was added in position ${position}.`,
     deleted: (name: string) => `“${name}” was deleted.`,
     leftEmpty: (position: number) => `Position ${position} is now empty.`,
     copyKept: 'A copy is kept under Recently deleted, at the bottom of this page.',
@@ -317,11 +500,7 @@ export const strings = {
     eyebrow: 'Coming next',
     edit: {
       title: (name: string) => `Editing ${name} is coming next`,
-      body: `${comingNextBody} For now you can copy, move and delete models.`,
-    },
-    add: {
-      title: 'Adding a model is coming next',
-      body: `${comingNextBody} For now you can copy, move and delete models.`,
+      body: `${comingNextBody} For now you can add, copy, move and delete models.`,
     },
     openFiles: {
       title: 'Opening files yourself is coming next',
@@ -339,6 +518,7 @@ export const strings = {
       connect: 'Connect',
       models: 'Your models',
       delete: 'Delete',
+      wizard: 'Add a model',
       finish: 'Finish and unplug',
     } satisfies Record<ScenarioGroup, string>,
     scenarios: {
@@ -363,7 +543,6 @@ export const strings = {
       'models-moved': 'After a move',
       'models-dragged': 'After a drag',
       'models-edit-coming-next': 'Edit (coming next)',
-      'models-add-coming-next': 'Add a model (coming next)',
       'models-radio-setup': 'Radio setup, with the delete question',
       'delete-confirm': 'Confirm delete: the list will close up',
       'delete-confirm-leave-empty': 'Confirm delete: its place will be left empty',
@@ -374,6 +553,19 @@ export const strings = {
       'delete-done-left-empty': 'After deleting: its place was left empty',
       'delete-restored': 'After Restore: models pushed down',
       'delete-restored-empty-place': 'After Restore: its place was still empty',
+      'wizard-name-empty': 'Step 1: empty',
+      'wizard-name-too-long': 'Step 1: a name that is too long',
+      'wizard-receiver': 'Step 2: before searching',
+      'wizard-receiver-search': 'Step 2: a search that matches',
+      'wizard-receiver-no-match': 'Step 2: a search that matches nothing',
+      'wizard-receiver-picked': 'Step 2: a receiver picked',
+      'wizard-receiver-cant-find': 'Step 2: “I can’t find my receiver”',
+      'wizard-steering-car': 'Step 3: for a car',
+      'wizard-steering-crawler': 'Step 3: for a crawler',
+      'wizard-steering-more-options': 'Step 3: More options open',
+      'wizard-review': 'Review',
+      'wizard-leave': 'The leave question',
+      'wizard-added': 'The list after adding',
       'finish-and-unplug': 'Before you unplug',
       'finish-disconnected': 'Disconnected',
     } satisfies Record<ScenarioId, string>,

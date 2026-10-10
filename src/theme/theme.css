@@ -53,6 +53,8 @@
   /* Words inside a line drawing. Measured in the drawing's own units, so it scales with the drawing. */
   --text-drawing-label: 13px;
   --line-body: 1.55;
+  /* The height of one line of body text, for rows that must not jump when words come and go. */
+  --line-body-height: calc(var(--text-body) * var(--line-body));
   --line-heading: 1.2;
   --weight-normal: 400;
   --weight-medium: 550;
@@ -85,6 +87,16 @@
   --row-side-width: 24rem;
   --tag-height: 1.625rem;
   --picture-width: 13rem;
+  --picture-width-small: 6.5rem;
   --dialog-width: 34rem;
-  --review-panel-width: 68rem;
+  --name-field-width: 30rem;
+  --wizard-steps-width: 15rem;
+  /* The receiver list takes the room the window has left, between a least and a most. */
+  --receiver-list-least: 13rem;
+  --receiver-list-most: 26rem;
+  --receiver-step-rest: 37.75rem;
+  --receiver-brand-width: 7.5rem;
+  --setting-words-width: 25rem;
+  --setting-control-width: 19rem;
+  --review-panel-width: 80rem;
 }

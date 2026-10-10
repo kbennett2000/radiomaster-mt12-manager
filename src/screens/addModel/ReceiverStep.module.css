@@ -1,0 +1,153 @@
+.searchLabel {
+  display: block;
+  font-weight: var(--weight-bold);
+}
+
+.search {
+  width: 100%;
+  max-width: var(--name-field-width);
+  min-height: var(--control-height);
+  margin-top: var(--space-2);
+  padding: 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  font-size: var(--text-large);
+}
+
+/* The search, the line about the list, and the list belong together, so they sit close. */
+.finder {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* One line above the list: how many receivers it holds, and which one is picked. */
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-5);
+  min-height: var(--line-body-height);
+}
+
+.count {
+  color: var(--color-text-muted);
+}
+
+.picked {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-accent-strong);
+  font-weight: var(--weight-medium);
+}
+
+/* The list scrolls inside its own frame, sized to the window, so Back and Next stay in view. */
+.list {
+  min-width: 0;
+  max-height: clamp(
+    var(--receiver-list-least),
+    calc(100vh - var(--receiver-step-rest)),
+    var(--receiver-list-most)
+  );
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+/* One brand: its name on the left, its receivers on the right. */
+.brand {
+  display: grid;
+  grid-template-columns: var(--receiver-brand-width) minmax(0, 1fr);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.brand:first-of-type {
+  border-top: none;
+}
+
+.brandName {
+  padding: var(--space-3) var(--space-4);
+  font-weight: var(--weight-bold);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  border-left: var(--space-1) solid transparent;
+  cursor: pointer;
+}
+
+.entry:hover {
+  background: var(--color-page);
+}
+
+.entry:has(.radio:checked) {
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.entry:has(.radio:checked) .label {
+  font-weight: var(--weight-bold);
+}
+
+.entry:has(.radio:focus-visible) {
+  outline: var(--focus-ring) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-ring));
+}
+
+.radio:focus-visible {
+  outline: none;
+}
+
+.radio {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: var(--space-1) 0 0;
+  accent-color: var(--color-accent);
+}
+
+.label {
+  overflow-wrap: anywhere;
+}
+
+.typeName {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.nothing {
+  padding: var(--space-5) var(--space-4);
+}
+
+/* A link in looks, a button in fact: it opens a panel and goes nowhere. */
+.cantFind {
+  padding: var(--space-1) 0;
+  border: none;
+  background: none;
+  color: var(--color-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.panel {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  max-width: var(--reading-width);
+  margin-top: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-sunken);
+}
+
+.panel[hidden] {
+  display: none;
+}

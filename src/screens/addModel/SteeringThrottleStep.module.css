@@ -1,0 +1,145 @@
+/* Steering and Throttle: one white panel each, one setting per row. */
+
+.section,
+.more {
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.section {
+  padding: var(--space-5) var(--space-5) var(--space-2);
+}
+
+/* A setting: its name and explanation on the left, the control on the right. */
+.setting {
+  display: grid;
+  grid-template-columns: minmax(0, var(--setting-words-width)) minmax(var(--setting-control-width), 1fr);
+  align-items: start;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-4) 0;
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.section .setting:first-of-type {
+  margin-top: var(--space-4);
+}
+
+.settingLabel {
+  font-weight: var(--weight-bold);
+}
+
+.settingHelp {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.control {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* A choice between a few short answers, side by side. */
+.pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.pickOption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-5) 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.pickOption:hover {
+  border-color: var(--color-border-strong);
+}
+
+.pickOption:has(.pickRadio:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.pickOption:has(.pickRadio:focus-visible) {
+  outline: var(--focus-ring) solid var(--color-focus);
+  outline-offset: var(--focus-ring);
+}
+
+.pickRadio:focus-visible {
+  outline: none;
+}
+
+.pickRadio {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* A slider with its number beside it. */
+.slider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--control-height);
+}
+
+.range {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.value {
+  flex: none;
+  width: var(--space-8);
+  font-size: var(--text-large);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-bold);
+  text-align: right;
+}
+
+/* More options: closed until asked for. */
+.more {
+  padding: 0 var(--space-5);
+}
+
+.moreSummary {
+  padding: var(--space-4) 0;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.port {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.portSelect {
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+}
+
+.portSelect[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}

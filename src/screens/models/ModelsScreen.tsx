@@ -26,18 +26,37 @@ import { RecentlyDeleted } from './RecentlyDeleted.tsx'
 interface ModelsScreenProps {
   state: AppState
   dispatch: Dispatch<Action>
+  /** Opens the "Add a model" wizard. `position` is the empty place it was opened from, if any. */
+  onAdd: (position?: number) => void
 }
+
+type ScreenParts = Pick<ModelsScreenProps, 'state' | 'dispatch'>
 
 const text = strings.models
 
-function AddModelAction({ full, onFull }: { full: boolean; onFull: () => void }) {
+interface AddModelActionProps {
+  full: boolean
+  onFull: () => void
+  onAdd: () => void
+}
+
+function AddModelAction({ full, onFull, onAdd }: AddModelActionProps) {
   // When the radio is full the action stays where it is and explains why it cannot add.
   return full ? (
     <Button variant="primary" size="large" icon={<PlusIcon />} onClick={onFull}>
       {text.addModel}
     </Button>
   ) : (
-    <ButtonLink variant="primary" size="large" icon={<PlusIcon />} href={paths.addModel}>
+    <ButtonLink
+      variant="primary"
+      size="large"
+      icon={<PlusIcon />}
+      href={paths.addStep('name')}
+      onClick={(event) => {
+        event.preventDefault()
+        onAdd()
+      }}
+    >
       {text.addModel}
     </ButtonLink>
   )
@@ -54,8 +73,9 @@ function shiftWords(shift: Shift): string | null {
 function noticeWords(notice: Exclude<Change, { kind: 'radioSetupSaved' }>): string {
   const say = strings.notice
   switch (notice.kind) {
+    case 'added':
     case 'copied':
-      return say.copied(notice.modelName, notice.position)
+      return say.added(notice.modelName, notice.position)
     case 'moved':
       return say.moved(notice.modelName, notice.position)
     case 'emptyMoved':
@@ -76,7 +96,7 @@ function noticeWords(notice: Exclude<Change, { kind: 'radioSetupSaved' }>): stri
   }
 }
 
-function ChangeNotice({ state, dispatch }: ModelsScreenProps) {
+function ChangeNotice({ state, dispatch }: ScreenParts) {
   const notice = state.notice
   if (!notice) return null
 
@@ -124,7 +144,7 @@ function whatElseHappens(state: AppState, model: Model): string {
   return say.othersWillMoveUp(after.length)
 }
 
-function OpenDialog({ state, dispatch }: ModelsScreenProps) {
+function OpenDialog({ state, dispatch }: ScreenParts) {
   const dialog = state.dialog
   const close = () => dispatch({ type: 'dialogClosed' })
   if (!dialog) return null
@@ -171,7 +191,7 @@ function OpenDialog({ state, dispatch }: ModelsScreenProps) {
   )
 }
 
-export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
+export function ModelsScreen({ state, dispatch, onAdd }: ModelsScreenProps) {
   const full = isRadioFull(state)
   const empty = state.models.length === 0
   const current = state.models.find((model) => model.id === state.currentModelId)
@@ -182,7 +202,7 @@ export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
       <div className={styles.top}>
         <h1>{text.title}</h1>
         {!empty && <p className={styles.hint}>{text.reorderHint}</p>}
-        {!empty && <AddModelAction full={full} onFull={explainFull} />}
+        {!empty && <AddModelAction full={full} onFull={explainFull} onAdd={() => onAdd()} />}
       </div>
 
       {full && <p className={styles.full}>{text.fullBanner(MT12.maxModels)}</p>}
@@ -195,7 +215,7 @@ export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
         <div className={styles.empty}>
           <h2>{text.empty.title}</h2>
           <p className={styles.emptyBody}>{text.empty.body}</p>
-          <AddModelAction full={full} onFull={explainFull} />
+          <AddModelAction full={full} onFull={explainFull} onAdd={() => onAdd()} />
         </div>
       ) : (
         <>
@@ -208,6 +228,7 @@ export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
             onMoved={(fromPosition, toPosition) => dispatch({ type: 'placeMoved', fromPosition, toPosition })}
             onDelete={(modelId) => dispatch({ type: 'deleteRequested', modelId })}
             onCloseUp={() => dispatch({ type: 'emptyPlacesClosedUp' })}
+            onAddAt={onAdd}
           />
         </>
       )}

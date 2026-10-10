@@ -130,3 +130,25 @@
 .problem:empty {
   display: none;
 }
+
+/*
+ * Four pictures in a row need a wide window. On a narrower one they sit two by two, each with its
+ * picture beside its words, so the four still fit on the screen together.
+ */
+@media (max-width: 1199px) {
+  .pictures[data-count='4'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .pictures[data-count='4'] .card {
+    grid-template-columns: var(--picture-width-small) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+
+  .pictures[data-count='4'] .picture {
+    margin: 0;
+  }
+}

@@ -5,9 +5,17 @@ import type { Feature, FeedbackKind, Model, ModelId } from '../domain/model.ts'
 import type { ControlId } from '../domain/radio.ts'
 
 // Every model has steering on the wheel (receiver port 1) and throttle on the trigger (receiver port 2).
-const steering: Feature = { kind: 'steering', control: 'wheel', port: 1 }
-const throttle: Feature = { kind: 'throttle', control: 'trigger', port: 2, feel: 'standard' }
-const throttleWithCustomFeel: Feature = { kind: 'throttle', control: 'trigger', port: 2, feel: 'custom' }
+// Direction, how far the wheels turn and the top speed limit are all at their standard values.
+const steering: Feature = { kind: 'steering', control: 'wheel', port: 1, direction: 'normal', travel: 100 }
+const throttle: Feature = {
+  kind: 'throttle',
+  control: 'trigger',
+  port: 2,
+  direction: 'normal',
+  feel: 'standard',
+  topSpeed: 100,
+}
+const throttleWithCustomFeel: Feature = { ...throttle, feel: 'custom' }
 
 const twoSpeed = (control: ControlId, port: number): Feature => ({ kind: 'twoSpeedTransmission', control, port })
 const frontDiffLock = (control: ControlId, port: number): Feature => ({ kind: 'frontDiffLock', control, port })
