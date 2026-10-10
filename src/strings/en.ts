@@ -5,9 +5,9 @@
 // Say "receiver port", "receiver type" and "model" instead.
 
 import { APP_NAME } from '../config/app.ts'
-import type { BrandId, ReceiverTypeId } from '../domain/catalog.ts'
+import type { BrandId, LightColour, ReceiverTypeId } from '../domain/catalog.ts'
 import type { ExtraKind, ExtraProblem } from '../domain/extras.ts'
-import type { CustomWorks, Direction, FeedbackKind, SwitchPosition } from '../domain/model.ts'
+import type { CustomWorks, Direction, FeedbackKind, FeedbackSound, SwitchPosition } from '../domain/model.ts'
 import type { WhenDeleting } from '../domain/positions.ts'
 import type { BaseFitting, ControlId, ControlKind } from '../domain/radio.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
@@ -341,7 +341,6 @@ export const strings = {
       review: 'Review',
       bind: 'Bind your receiver',
     } satisfies Record<WizardStepId, string>,
-    comingNext: 'Coming next',
     done: 'Done',
     back: 'Back',
     next: 'Next',
@@ -530,6 +529,67 @@ export const strings = {
       cruiseSpeedPart: 'speed',
     },
 
+    feedback: {
+      question: 'How should your radio tell you what’s happening?',
+      help: 'Your radio can beep, speak, buzz and change the colour of its lights, so you don’t have to look down.',
+      modelColour: 'Light colour for this model',
+      modelColourHelp: 'Handy for telling at a glance which model your radio is set to.',
+      dontChange: 'Don’t change',
+      colours: {
+        red: 'Red',
+        orange: 'Orange',
+        yellow: 'Yellow',
+        green: 'Green',
+        blue: 'Blue',
+        purple: 'Purple',
+        white: 'White',
+      } satisfies Record<LightColour, string>,
+      extrasTitle: 'When an extra switches',
+      extrasHelp: 'Choose what your radio does each time one of these switches.',
+      nothingSwitches:
+        'Nothing you picked switches on and off, so the model’s light colour is the only thing to set here.',
+      sound: 'Sound',
+      sounds: { off: 'Off', beep: 'Beep', voice: 'Voice' } satisfies Record<FeedbackSound, string>,
+      vibration: 'Vibration',
+      vibrationOff: 'Off',
+      vibrationOn: 'On',
+      colourWhileOn: 'Light colour while it is on',
+      none: 'None',
+      // A setting named in full for screen readers, such as "Sound for Lights".
+      settingFor: (setting: string, extra: string) => `${setting} for ${extra}`,
+      says: (words: readonly string[]) => `It will say ${listOf(words.map((word) => `“${word}”`))}.`,
+      clash: 'If two of these are on at once, the one lower in this list sets the light colour.',
+      // What Voice would say as each extra switches. Placeholder words: the sound files that say
+      // them are not made yet, and will have to be put on the radio's SD card.
+      voice: {
+        twoSpeedTransmission: ['High gear', 'Low gear'],
+        twoSpeedWithNeutral: ['High gear', 'Neutral', 'Low gear'],
+        frontDiffLock: ['Front diff locked', 'Front diff open'],
+        rearDiffLock: ['Rear diff locked', 'Rear diff open'],
+        lights: ['Lights on', 'Lights off'],
+        cruiseControl: ['Cruise on', 'Cruise off'],
+        throttleSafetyLock: ['Throttle unlocked', 'Throttle locked'],
+        onOff: (name: string) => [`${name} on`, `${name} off`],
+        threePositions: (name: string) => [`${name} up`, `${name} middle`, `${name} down`],
+      },
+    },
+
+    // The last page of the wizard. This wording is a placeholder: it has not been checked on a
+    // real radio yet.
+    bind: {
+      title: 'Last step: bind your receiver',
+      intro: 'Binding introduces your radio and your receiver to each other. You do it once, on the radio itself.',
+      added: (name: string, position: number) => `“${name}” is in your list now, in position ${position}.`,
+      steps: (name: string) => [
+        'Finish and unplug your radio.',
+        `On the radio, press MDL and choose ${name}.`,
+        'Put the receiver into bind mode. Its instructions say how; it is usually a small button you hold while switching the vehicle on.',
+        'On the radio, open the model’s setup and choose Bind.',
+      ],
+      backToModels: 'Back to your models',
+      finishAndUnplug: 'Finish and unplug',
+    },
+
     review: {
       title: 'Check it over',
       rows: {
@@ -558,7 +618,15 @@ export const strings = {
       portsTitle: 'What to plug into your receiver',
       portsHelp: 'The ports are numbered on the receiver’s case.',
       nothing: 'Nothing',
-      comingNext: 'Radio feedback and binding are coming next.',
+      feedbackLabel: 'Radio feedback',
+      feedbackNone: 'None',
+      modelColour: (colour: string) => `Model light colour: ${colour}`,
+      // One extra's feedback, such as "Lights: beep, vibration and blue light".
+      extraFeedback: (extra: string, what: string) => `${extra}: ${what}`,
+      feedbackSound: { beep: 'beep', voice: 'voice' } satisfies Record<Exclude<FeedbackSound, 'off'>, string>,
+      feedbackVibration: 'vibration',
+      feedbackColour: (colour: string) => `${colour.toLowerCase()} light`,
+      afterThis: 'After this, the last step shows you how to bind your receiver.',
       confirm: 'Add to my radio',
     },
 
@@ -732,9 +800,14 @@ export const strings = {
       'wizard-extras-missing': 'Step 4: a missing answer',
       'wizard-extras-winch': 'Step 4: “Something else” as a winch',
       'wizard-extras-gyro-hint': 'Step 4: gyro gain, with the port 8 hint',
+      'wizard-feedback-none': 'Step 5: nothing that switches',
+      'wizard-feedback-rows': 'Step 5: several rows',
+      'wizard-feedback-voice': 'Step 5: Voice picked',
+      'wizard-feedback-clash': 'Step 5: a colour clash explained',
       'wizard-review': 'Review: no extras',
       'wizard-review-crawler': 'Review: a full crawler',
       'wizard-leave': 'The leave question',
+      'wizard-bind': 'Step 7: bind your receiver',
       'wizard-added': 'The list after adding',
       'finish-and-unplug': 'Before you unplug',
       'finish-disconnected': 'Disconnected',

@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { Pills } from '../../components/Pills.tsx'
 import { MT12, RECEIVER_PORTS } from '../../domain/catalog.ts'
 import type { ExtraAnswers } from '../../domain/extras.ts'
 import type { Direction } from '../../domain/model.ts'
@@ -37,36 +38,6 @@ function Setting({ label, help, children }: SettingProps) {
         </p>
       </div>
       <div className={styles.control}>{children({ labelId, helpId })}</div>
-    </div>
-  )
-}
-
-interface PickOneProps<Value extends string> {
-  ids: { labelId: string; helpId: string }
-  options: readonly Value[]
-  labels: Record<Value, string>
-  value: Value
-  onChange: (value: Value) => void
-}
-
-/** A choice between a few short answers, side by side. */
-function PickOne<Value extends string>({ ids, options, labels, value, onChange }: PickOneProps<Value>) {
-  const name = useId()
-  return (
-    <div className={styles.pick} role="radiogroup" aria-labelledby={ids.labelId} aria-describedby={ids.helpId}>
-      {options.map((option) => (
-        <label key={option} className={styles.pickOption}>
-          <input
-            type="radio"
-            className={styles.pickRadio}
-            name={name}
-            value={option}
-            checked={value === option}
-            onChange={() => onChange(option)}
-          />
-          <span>{labels[option]}</span>
-        </label>
-      ))}
     </div>
   )
 }
@@ -149,10 +120,10 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
         <h2 id={steeringId}>{text.steering}</h2>
         <Setting label={text.steeringDirection} help={text.steeringDirectionHelp(draft.vehicleKind)}>
           {(ids) => (
-            <PickOne
-              ids={ids}
-              options={directions}
-              labels={text.directions}
+            <Pills
+              labelledBy={ids.labelId}
+              describedBy={ids.helpId}
+              options={directions.map((value) => ({ value, label: text.directions[value] }))}
               value={draft.steeringDirection}
               onChange={(steeringDirection) => onChange({ steeringDirection })}
             />
@@ -174,10 +145,10 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
         <h2 id={throttleId}>{text.throttle}</h2>
         <Setting label={text.throttleDirection} help={text.throttleDirectionHelp(draft.vehicleKind)}>
           {(ids) => (
-            <PickOne
-              ids={ids}
-              options={directions}
-              labels={text.directions}
+            <Pills
+              labelledBy={ids.labelId}
+              describedBy={ids.helpId}
+              options={directions.map((value) => ({ value, label: text.directions[value] }))}
               value={draft.throttleDirection}
               onChange={(throttleDirection) => onChange({ throttleDirection })}
             />
@@ -185,10 +156,10 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
         </Setting>
         <Setting label={text.feel} help={text.feelHelp}>
           {(ids) => (
-            <PickOne
-              ids={ids}
-              options={feels}
-              labels={text.feels}
+            <Pills
+              labelledBy={ids.labelId}
+              describedBy={ids.helpId}
+              options={feels.map((value) => ({ value, label: text.feels[value] }))}
               value={throttleFeelOf(draft)}
               onChange={(throttleFeel) => onChange({ throttleFeel })}
             />

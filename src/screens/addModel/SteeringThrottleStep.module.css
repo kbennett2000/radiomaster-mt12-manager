@@ -40,51 +40,6 @@
   min-width: 0;
 }
 
-/* A choice between a few short answers, side by side. */
-.pick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.pickOption {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--control-height);
-  padding: 0 var(--space-5) 0 var(--space-4);
-  border: var(--border-thick) solid var(--color-border);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-
-.pickOption:hover {
-  border-color: var(--color-border-strong);
-}
-
-.pickOption:has(.pickRadio:checked) {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-
-.pickOption:has(.pickRadio:focus-visible) {
-  outline: var(--focus-ring) solid var(--color-focus);
-  outline-offset: var(--focus-ring);
-}
-
-.pickRadio:focus-visible {
-  outline: none;
-}
-
-.pickRadio {
-  width: var(--icon-size);
-  height: var(--icon-size);
-  margin: 0;
-  accent-color: var(--color-accent);
-}
-
 /* A slider with its number beside it. */
 .slider {
   display: flex;

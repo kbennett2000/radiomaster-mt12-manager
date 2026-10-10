@@ -8,6 +8,8 @@ import { BUILT_STEPS, type BuiltStepId } from './wizard.ts'
 export type Route =
   | { name: 'home' }
   | { name: 'addModel'; step: BuiltStepId }
+  /** The wizard's last page, shown once the model has been added. */
+  | { name: 'bind' }
   | { name: 'editModel'; modelId: ModelId }
   | { name: 'radioSetup' }
   | { name: 'finish' }
@@ -19,6 +21,7 @@ const stepSlugs: Record<BuiltStepId, string> = {
   receiver: 'receiver',
   steeringThrottle: 'steering-throttle',
   extras: 'extras',
+  feedback: 'feedback',
   review: 'review',
 }
 
@@ -26,6 +29,7 @@ export const paths = {
   home: '#/',
   /** Each step of the "Add a model" wizard has its own address, so the browser's Back steps through them. */
   addStep: (step: BuiltStepId) => `#/models/add/${stepSlugs[step]}`,
+  bind: '#/models/add/bind',
   editModel: (modelId: ModelId) => `#/models/${encodeURIComponent(modelId)}/edit`,
   radioSetup: '#/radio-setup',
   finish: '#/finish',
@@ -34,6 +38,7 @@ export const paths = {
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, '')
+  if (path === '/models/add/bind') return { name: 'bind' }
   const add = /^\/models\/add(?:\/([^/]*))?$/.exec(path)
   if (add) return { name: 'addModel', step: BUILT_STEPS.find((step) => stepSlugs[step] === add[1]) ?? 'name' }
   if (path === '/radio-setup') return { name: 'radioSetup' }

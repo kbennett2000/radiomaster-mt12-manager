@@ -98,6 +98,11 @@ export interface AppState {
   wizard: WizardState | null
   /** A model that was just added. The list scrolls to its row and marks it for a moment. */
   newModelId: ModelId | null
+  /**
+   * The model the wizard added last. Its "Bind your receiver" page can be shown for it, and shown
+   * again if the person comes back to that page. It lasts until another wizard is opened.
+   */
+  lastAddedModelId: ModelId | null
   /** Used to give each copy and each added model its own id. */
   nextCopyNumber: number
 }
@@ -150,6 +155,7 @@ export function initialState(browserSupported: boolean): AppState {
     dialog: null,
     wizard: null,
     newModelId: null,
+    lastAddedModelId: null,
     nextCopyNumber: 1,
   }
 }
@@ -207,6 +213,8 @@ export function reducer(state: AppState, action: Action): AppState {
         notice: null,
         dialog: null,
         wizard: null,
+        newModelId: null,
+        lastAddedModelId: null,
       }
 
     case 'baseFittingAnswered':
@@ -334,7 +342,7 @@ export function reducer(state: AppState, action: Action): AppState {
       const position =
         requested !== undefined && !modelAt(state.models, requested) ? requested : firstEmptyPosition(state.models)
       if (position === null) return { ...state, dialog: { type: 'radioFull' } }
-      return { ...state, wizard: newWizard(position), notice: null, dialog: null }
+      return { ...state, wizard: newWizard(position), lastAddedModelId: null, notice: null, dialog: null }
     }
 
     case 'wizardStepShown':
@@ -414,6 +422,7 @@ export function reducer(state: AppState, action: Action): AppState {
         notice: { kind: 'added', modelName: model.name, position: model.position },
         wizard: null,
         newModelId: model.id,
+        lastAddedModelId: model.id,
       }
     }
 

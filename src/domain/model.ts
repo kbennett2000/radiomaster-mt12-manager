@@ -1,7 +1,7 @@
 // The contract for a model and its features.
 // Later cycles fill these same types from the radio's real files, so nothing here may depend on a screen.
 
-import type { ReceiverTypeId } from './catalog.ts'
+import type { LightColour, ReceiverTypeId } from './catalog.ts'
 import type { ControlId } from './radio.ts'
 
 export type ModelId = string
@@ -21,6 +21,23 @@ interface WorkedThroughPort {
 interface WorkedOnRadio {
   /** The radio control that works it. */
   control: ControlId
+}
+
+/** The sound the radio makes when an extra switches. */
+export type FeedbackSound = 'off' | 'beep' | 'voice'
+
+/** How the radio tells the driver that one extra has switched, so they need not look down. */
+export interface ExtraFeedback {
+  sound: FeedbackSound
+  vibration: boolean
+  /** The colour the radio's lights show while the extra is on. Null leaves the lights alone. */
+  lightColour: LightColour | null
+}
+
+/** A feature that switches between states, which the radio can announce. A dial does not. */
+interface Switches {
+  /** Left out when the radio does nothing extra as this feature switches. */
+  feedback?: ExtraFeedback
 }
 
 /** A position of a switch. A two-position switch has no middle. */
@@ -60,21 +77,21 @@ export interface ThrottleFeature extends WorkedThroughPort {
   topSpeed: number
 }
 
-export interface TwoSpeedTransmissionFeature extends WorkedThroughPort {
+export interface TwoSpeedTransmissionFeature extends WorkedThroughPort, Switches {
   kind: 'twoSpeedTransmission'
   /** On a three-position switch, up is high gear and down is low gear. True swaps the two. */
   swapped?: boolean
 }
 
-export interface FrontDiffLockFeature extends WorkedThroughPort, OnAndOff {
+export interface FrontDiffLockFeature extends WorkedThroughPort, OnAndOff, Switches {
   kind: 'frontDiffLock'
 }
 
-export interface RearDiffLockFeature extends WorkedThroughPort, OnAndOff {
+export interface RearDiffLockFeature extends WorkedThroughPort, OnAndOff, Switches {
   kind: 'rearDiffLock'
 }
 
-export interface LightsFeature extends WorkedThroughPort, OnAndOff {
+export interface LightsFeature extends WorkedThroughPort, OnAndOff, Switches {
   kind: 'lights'
 }
 
@@ -93,14 +110,14 @@ export interface DragBrakeFeature extends WorkedThroughPort {
 export type CustomWorks = 'onOff' | 'threePositions' | 'dial'
 
 /** Anything the vehicle has that the app has no name for. The owner names it and says how it works. */
-export interface CustomExtraFeature extends WorkedThroughPort, OnAndOff {
+export interface CustomExtraFeature extends WorkedThroughPort, OnAndOff, Switches {
   kind: 'customExtra'
   name: string
   works: CustomWorks
 }
 
 /** Holds a speed without the trigger. It acts on the throttle, so it has no port of its own. */
-export interface CruiseControlFeature {
+export interface CruiseControlFeature extends Switches {
   kind: 'cruiseControl'
   /** The control that turns it on and off. */
   onOffControl: ControlId
@@ -109,7 +126,7 @@ export interface CruiseControlFeature {
 }
 
 /** The trigger does nothing until this control unlocks it. "On" here means unlocked. */
-export interface ThrottleSafetyLockFeature extends WorkedOnRadio, OnAndOff {
+export interface ThrottleSafetyLockFeature extends WorkedOnRadio, OnAndOff, Switches {
   kind: 'throttleSafetyLock'
 }
 
@@ -147,7 +164,7 @@ export type Feature =
 
 export type FeatureKind = Feature['kind']
 
-/** A way the radio itself tells the driver something. */
+/** A way the radio itself tells the driver something. The list shows these as one quiet line. */
 export type FeedbackKind = 'voiceCallouts' | 'beeps' | 'vibration' | 'ledColour'
 
 /** One vehicle's setup on the radio. */
@@ -163,5 +180,11 @@ export interface Model {
   receiverTypeId: ReceiverTypeId
   /** What the vehicle has, in the order the owner sees it. */
   features: readonly Feature[]
+  /**
+   * Feedback the radio gives that is not tied to one feature. Feedback for a feature is kept on
+   * the feature itself. A model read from a radio may have only this.
+   */
   feedback: readonly FeedbackKind[]
+  /** The colour the radio's lights show while it is set to this model. Null leaves them alone. */
+  lightColour: LightColour | null
 }

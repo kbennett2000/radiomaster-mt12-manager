@@ -84,6 +84,8 @@ export interface RadioDefinition {
   steeringTravel: PercentRange
   /** The top speed limit. */
   topSpeed: PercentRange
+  /** The colours the radio's lights can show. */
+  lightColours: readonly string[]
   controls: readonly ControlDefinition[]
   baseFittings: readonly BaseFitting[]
   modules: readonly RadioModuleDefinition[]

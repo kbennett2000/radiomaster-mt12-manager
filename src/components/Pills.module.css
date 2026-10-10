@@ -1,0 +1,84 @@
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-5) 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.pill:hover {
+  border-color: var(--color-border-strong);
+}
+
+.pill:has(.radio:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.pill:has(.radio:focus-visible) {
+  outline: var(--focus-ring) solid var(--color-focus);
+  outline-offset: var(--focus-ring);
+}
+
+.radio:focus-visible {
+  outline: none;
+}
+
+.radio {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* A dot of one of the radio's light colours. The ring keeps white and yellow visible. */
+.dot {
+  flex: none;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: var(--border-thin) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.dot[data-colour='none'] {
+  border-style: dashed;
+}
+
+.dot[data-colour='red'] {
+  background: var(--led-red);
+}
+
+.dot[data-colour='orange'] {
+  background: var(--led-orange);
+}
+
+.dot[data-colour='yellow'] {
+  background: var(--led-yellow);
+}
+
+.dot[data-colour='green'] {
+  background: var(--led-green);
+}
+
+.dot[data-colour='blue'] {
+  background: var(--led-blue);
+}
+
+.dot[data-colour='purple'] {
+  background: var(--led-purple);
+}
+
+.dot[data-colour='white'] {
+  background: var(--led-white);
+}

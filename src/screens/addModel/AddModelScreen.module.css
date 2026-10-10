@@ -79,14 +79,8 @@
   color: var(--color-accent-strong);
 }
 
-.stepItem[data-standing='later'] .badge {
-  border-style: dashed;
-}
-
-/* "Coming next", under the name of a step that is not built yet. */
-.later {
-  display: block;
-  line-height: var(--line-heading);
+.content {
+  min-width: 0;
 }
 
 .form {

@@ -19,6 +19,7 @@ export const MT12 = {
   firstExtraPort: 3,
   steeringTravel: { min: 50, max: 120, standard: 100 },
   topSpeed: { min: 30, max: 100, standard: 100 },
+  lightColours: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white'],
   // The order here is the order controls are listed in: by where they sit on the radio.
   controls: [
     { id: 'wheel', kind: 'wheel' },
@@ -80,6 +81,10 @@ export const MT12 = {
 export type RadioModuleId = (typeof MT12.modules)[number]['id']
 export type ReceiverTypeId = (typeof MT12.modules)[number]['receiverTypes'][number]['id']
 export type BrandId = (typeof MT12.modules)[number]['receiverTypes'][number]['brand']
+
+/** A colour the radio's lights can show. */
+export type LightColour = (typeof MT12.lightColours)[number]
+export const LIGHT_COLOURS: readonly LightColour[] = MT12.lightColours
 
 /** Every receiver type the radio's module offers, in the order they are listed. */
 export const RECEIVER_TYPES = MT12.modules.flatMap((module) => module.receiverTypes)

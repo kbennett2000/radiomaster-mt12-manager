@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import App from '../../App.tsx'
+import { MT12 } from '../../domain/catalog.ts'
 import { findScenario } from '../../state/scenarios.ts'
 import { strings } from '../../strings/en.ts'
 
@@ -29,9 +30,13 @@ test('Review sums up the answers, says what each control and port does, and adds
   expect(ports.getAllByRole('term')).toHaveLength(8)
   expect(ports.getByText('Winch')).toBeTruthy()
 
+  // The feedback given on step 5 is summed up too.
+  expect(main.getByText(text.modelColour(strings.addModel.feedback.colours.green))).toBeTruthy()
+  expect(main.getByText(text.afterThis)).toBeTruthy()
+
   fireEvent.click(main.getByRole('button', { name: text.confirm }))
 
-  expect(main.getByRole('heading', { level: 1, name: strings.models.title })).toBeTruthy()
-  expect(main.getByText(strings.notice.added('Bouncer', 21))).toBeTruthy()
-  expect(main.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toContain('Bouncer')
+  // The model is added, and the wizard's last page shows how to bind the receiver.
+  expect(main.getByRole('heading', { level: 2, name: strings.addModel.bind.title })).toBeTruthy()
+  expect(screen.getByText(strings.header.connected(21, MT12.maxModels))).toBeTruthy()
 })
