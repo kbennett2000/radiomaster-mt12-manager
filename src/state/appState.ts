@@ -18,12 +18,16 @@ import {
   restoreModel,
   type WhenDeleting,
 } from '../domain/positions.ts'
+import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { BaseFitting } from '../domain/radio.ts'
 import {
+  everyStepIsFine,
   modelFrom,
   newWizard,
   problemsIn,
-  stepIsFine,
+  withExtraChanged,
+  withExtraPicked,
+  withExtraRemoved,
   type BuiltStepId,
   type ModelDraft,
   type WizardState,
@@ -92,6 +96,8 @@ export interface AppState {
   dialog: OpenDialog | null
   /** The "Add a model" wizard while it is open, with the answers so far. */
   wizard: WizardState | null
+  /** A model that was just added. The list scrolls to its row and marks it for a moment. */
+  newModelId: ModelId | null
   /** Used to give each copy and each added model its own id. */
   nextCopyNumber: number
 }
@@ -116,10 +122,16 @@ export type Action =
   | { type: 'wizardOpened'; position?: number }
   | { type: 'wizardStepShown'; step: BuiltStepId }
   | { type: 'wizardChanged'; draft?: Partial<ModelDraft>; view?: Partial<WizardView> }
+  /** An extra was picked on step 4. Its questions open under it. */
+  | { type: 'wizardExtraPicked'; kind: ExtraKind }
+  | { type: 'wizardExtraRemoved'; id: string }
+  | { type: 'wizardExtraChanged'; id: string; answers: Partial<ExtraAnswers> }
   /** The person tried to move on from a step, so anything missing on it should now be pointed out. */
   | { type: 'wizardStepTried'; step: BuiltStepId }
   | { type: 'wizardLeft' }
   | { type: 'wizardFinished' }
+  /** The list has shown the mark on a newly added row for long enough. */
+  | { type: 'newModelMarked' }
   | { type: 'dialogClosed' }
   | { type: 'noticeDismissed' }
 
@@ -137,6 +149,7 @@ export function initialState(browserSupported: boolean): AppState {
     notice: null,
     dialog: null,
     wizard: null,
+    newModelId: null,
     nextCopyNumber: 1,
   }
 }
@@ -338,10 +351,45 @@ export function reducer(state: AppState, action: Action): AppState {
         },
       }
 
+    case 'wizardExtraPicked': {
+      const wizard = state.wizard
+      if (!wizard) return state
+      const { draft, id } = withExtraPicked(wizard.draft, action.kind)
+      return { ...state, wizard: { ...wizard, draft, view: { ...wizard.view, openExtraId: id } } }
+    }
+
+    case 'wizardExtraRemoved': {
+      const wizard = state.wizard
+      if (!wizard) return state
+      const openExtraId = wizard.view.openExtraId === action.id ? null : wizard.view.openExtraId
+      return {
+        ...state,
+        wizard: {
+          ...wizard,
+          draft: withExtraRemoved(wizard.draft, action.id),
+          view: { ...wizard.view, openExtraId },
+        },
+      }
+    }
+
+    case 'wizardExtraChanged':
+      if (!state.wizard) return state
+      return {
+        ...state,
+        wizard: { ...state.wizard, draft: withExtraChanged(state.wizard.draft, action.id, action.answers) },
+      }
+
     case 'wizardStepTried': {
       const wizard = state.wizard
-      if (!wizard || wizard.tried.includes(action.step)) return state
-      return { ...state, wizard: { ...wizard, tried: [...wizard.tried, action.step] } }
+      if (!wizard) return state
+      const tried = wizard.tried.includes(action.step) ? wizard.tried : [...wizard.tried, action.step]
+      // On the extras step, open the first extra that still needs an answer, so the message about it shows.
+      const unfinished = Object.keys(problemsIn(wizard.draft, state.models).extras)
+      const openExtraId =
+        action.step === 'extras' && unfinished.length > 0 && !unfinished.includes(wizard.view.openExtraId ?? '')
+          ? unfinished[0]
+          : wizard.view.openExtraId
+      return { ...state, wizard: { ...wizard, tried, view: { ...wizard.view, openExtraId } } }
     }
 
     case 'wizardLeft':
@@ -355,9 +403,8 @@ export function reducer(state: AppState, action: Action): AppState {
       const position = taken ? firstEmptyPosition(state.models) : wizard.draft.position
       const model =
         position === null ? null : modelFrom(wizard.draft, `added-${state.nextCopyNumber}`, position)
-      const allFine = stepIsFine('name', problems) && stepIsFine('receiver', problems) && stepIsFine('steeringThrottle', problems)
       // Nothing is added unless every answer is in. The wizard stays open so the person can fix it.
-      if (!model || !allFine) return state
+      if (!model || !everyStepIsFine(problems)) return state
       return {
         ...state,
         models: placeModel(state.models, model, model.position),
@@ -366,8 +413,12 @@ export function reducer(state: AppState, action: Action): AppState {
         nextCopyNumber: state.nextCopyNumber + 1,
         notice: { kind: 'added', modelName: model.name, position: model.position },
         wizard: null,
+        newModelId: model.id,
       }
     }
+
+    case 'newModelMarked':
+      return { ...state, newModelId: null }
 
     case 'dialogClosed':
       return { ...state, dialog: null }

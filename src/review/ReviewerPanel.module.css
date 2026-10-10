@@ -51,10 +51,43 @@
   border-top: var(--border-thin) dashed var(--color-text);
 }
 
+/*
+ * Five columns. The two short groups, Connect and Finish, share the first one. The wizard has the
+ * most states by far, so it takes the last two columns and lists its states in two halves.
+ */
 .groups {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-rows: auto 1fr;
   gap: var(--space-4);
+}
+
+.groups section {
+  grid-row: 1 / span 2;
+}
+
+.groups section[data-group='connect'] {
+  grid-row: 1;
+}
+
+.groups section[data-group='finish'] {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.groups section[data-group='wizard'] {
+  grid-column: 4 / span 2;
+}
+
+.groups section[data-group='wizard'] .links {
+  display: block;
+  columns: 2;
+  column-gap: var(--space-4);
+}
+
+.groups section[data-group='wizard'] .links li {
+  margin-bottom: var(--space-1);
+  break-inside: avoid;
 }
 
 .group {

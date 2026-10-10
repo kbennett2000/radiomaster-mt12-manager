@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useLayoutEffect, useReducer, useRef } from 'react'
 import styles from './App.module.css'
 import { Header } from './components/Header.tsx'
 import { MT12 } from './domain/catalog.ts'
@@ -26,9 +26,15 @@ function App({ initialState }: { initialState: AppState }) {
 
   useEffect(() => () => window.clearTimeout(connectTimer.current), [])
 
+  // A new page starts at its top. This runs before any page's own scrolling, such as the list
+  // bringing a newly added row into view.
+  useLayoutEffect(() => {
+    if (route !== firstRoute.current) document.documentElement.scrollTop = 0
+  }, [route])
+
   // After moving to another page, start keyboard and screen reader users at the top of it.
   useEffect(() => {
-    if (route !== firstRoute.current) main.current?.focus()
+    if (route !== firstRoute.current) main.current?.focus({ preventScroll: true })
   }, [route])
 
   function connect() {
@@ -81,6 +87,7 @@ function App({ initialState }: { initialState: AppState }) {
         wizard={wizard}
         step={wizardStep ?? wizard.step}
         models={state.models}
+        baseFitting={state.radio.baseFitting}
         dispatch={dispatch}
         leaving={!onWizardPage}
         onKeepGoing={() => goTo(paths.addStep(wizard.step))}

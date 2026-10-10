@@ -23,6 +23,19 @@ interface WorkedOnRadio {
   control: ControlId
 }
 
+/** A position of a switch. A two-position switch has no middle. */
+export type SwitchPosition = 'up' | 'middle' | 'down'
+
+/**
+ * A feature that is either on or off. How its control works it follows from the kind of control:
+ * a push button turns it on and then off, a button pair has one button for each, and a switch is
+ * on in one position.
+ */
+interface OnAndOff {
+  /** On a three-position switch: the position that turns it on. Other kinds of control ignore it. */
+  onPosition?: SwitchPosition
+}
+
 /** Which way a control drives what it is plugged into. 'reversed' swaps the two ways round. */
 export type Direction = 'normal' | 'reversed'
 
@@ -49,17 +62,19 @@ export interface ThrottleFeature extends WorkedThroughPort {
 
 export interface TwoSpeedTransmissionFeature extends WorkedThroughPort {
   kind: 'twoSpeedTransmission'
+  /** On a three-position switch, up is high gear and down is low gear. True swaps the two. */
+  swapped?: boolean
 }
 
-export interface FrontDiffLockFeature extends WorkedThroughPort {
+export interface FrontDiffLockFeature extends WorkedThroughPort, OnAndOff {
   kind: 'frontDiffLock'
 }
 
-export interface RearDiffLockFeature extends WorkedThroughPort {
+export interface RearDiffLockFeature extends WorkedThroughPort, OnAndOff {
   kind: 'rearDiffLock'
 }
 
-export interface LightsFeature extends WorkedThroughPort {
+export interface LightsFeature extends WorkedThroughPort, OnAndOff {
   kind: 'lights'
 }
 
@@ -71,10 +86,17 @@ export interface DragBrakeFeature extends WorkedThroughPort {
   kind: 'dragBrake'
 }
 
-/** Anything the vehicle has that the app has no name for. The owner names it. */
-export interface CustomExtraFeature extends WorkedThroughPort {
+/**
+ * The ways an extra the owner named can work: on and off, three positions (good for a winch),
+ * or set to any amount with a dial.
+ */
+export type CustomWorks = 'onOff' | 'threePositions' | 'dial'
+
+/** Anything the vehicle has that the app has no name for. The owner names it and says how it works. */
+export interface CustomExtraFeature extends WorkedThroughPort, OnAndOff {
   kind: 'customExtra'
   name: string
+  works: CustomWorks
 }
 
 /** Holds a speed without the trigger. It acts on the throttle, so it has no port of its own. */
@@ -86,12 +108,12 @@ export interface CruiseControlFeature {
   speedControl: ControlId
 }
 
-/** The throttle does nothing until this control is switched on. */
-export interface ThrottleArmingFeature extends WorkedOnRadio {
-  kind: 'throttleArming'
+/** The trigger does nothing until this control unlocks it. "On" here means unlocked. */
+export interface ThrottleSafetyLockFeature extends WorkedOnRadio, OnAndOff {
+  kind: 'throttleSafetyLock'
 }
 
-/** A control that jumps the throttle to set positions. */
+/** A control that jumps the throttle to set positions. The wizard does not offer this yet. */
 export interface ThrottlePresetsFeature extends WorkedOnRadio {
   kind: 'throttlePresets'
 }
@@ -101,7 +123,7 @@ export interface HornSoundFeature extends WorkedOnRadio {
   kind: 'hornSound'
 }
 
-/** One control that sets several other features at once. The owner names it. */
+/** One control that sets several other features at once. The owner names it. The wizard does not offer this yet. */
 export interface OneButtonPresetFeature extends WorkedOnRadio {
   kind: 'oneButtonPreset'
   name: string
@@ -117,7 +139,7 @@ export type Feature =
   | CruiseControlFeature
   | GyroGainFeature
   | DragBrakeFeature
-  | ThrottleArmingFeature
+  | ThrottleSafetyLockFeature
   | ThrottlePresetsFeature
   | HornSoundFeature
   | OneButtonPresetFeature

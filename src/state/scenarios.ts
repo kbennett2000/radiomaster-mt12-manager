@@ -4,6 +4,7 @@
 
 import { FULL_RADIO_MODELS } from '../sample/fullRadio.ts'
 import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from '../sample/sampleModels.ts'
+import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { Model, ModelId } from '../domain/model.ts'
 import type { BaseFitting } from '../domain/radio.ts'
 import { initialState, reducer, type Action, type AppState } from './appState.ts'
@@ -56,7 +57,17 @@ export const SCENARIO_IDS = [
   'wizard-steering-car',
   'wizard-steering-crawler',
   'wizard-steering-more-options',
+  'wizard-steering-boat',
+  'wizard-extras-empty',
+  'wizard-extras-crawler',
+  'wizard-extras-one-open',
+  'wizard-extras-several',
+  'wizard-extras-taken',
+  'wizard-extras-missing',
+  'wizard-extras-winch',
+  'wizard-extras-gyro-hint',
   'wizard-review',
+  'wizard-review-crawler',
   'wizard-leave',
   'wizard-added',
   'finish-and-unplug',
@@ -105,13 +116,34 @@ const leavingPlacesEmpty: AppState = { ...ready(), whenDeleting: 'leaveEmpty' }
 const arrivedWithGaps = ready(SAMPLE_MODELS.filter((model) => ![8, 11, 14].includes(model.position)))
 
 /** The wizard, opened from "Add a model", on a step, with some answers already given. */
-const wizardOn = (step: BuiltStepId, draft: Partial<ModelDraft> = {}, view: Partial<WizardView> = {}): AppState =>
-  after(
-    ready(),
-    { type: 'wizardOpened' },
-    { type: 'wizardChanged', draft, view },
-    { type: 'wizardStepShown', step },
-  )
+const wizardOn = (
+  step: BuiltStepId,
+  draft: Partial<ModelDraft> = {},
+  view: Partial<WizardView> = {},
+  radio: AppState = ready(),
+): AppState =>
+  after(radio, { type: 'wizardOpened' }, { type: 'wizardChanged', draft, view }, { type: 'wizardStepShown', step })
+
+/** One extra to pick on step 4, with the answers to give it. Its receiver port is left to the suggestion. */
+type PickedExtra = [kind: ExtraKind, answers?: Partial<ExtraAnswers>]
+
+/** Picks extras and answers their questions, the way a person would. The last one picked is left open. */
+const withExtras = (state: AppState, ...extras: PickedExtra[]): AppState =>
+  extras.reduce((soFar, [kind, answers = {}]) => {
+    const picked = reducer(soFar, { type: 'wizardExtraPicked', kind })
+    const id = picked.wizard?.view.openExtraId
+    return id ? reducer(picked, { type: 'wizardExtraChanged', id, answers }) : picked
+  }, state)
+
+/** Folds every extra down to its summary line. */
+const folded = (state: AppState): AppState => reducer(state, { type: 'wizardChanged', view: { openExtraId: null } })
+
+/** One wizard scenario on step 4 or later, from a state built with the helpers above. */
+const wizardState = (step: BuiltStepId, state: AppState): Omit<Scenario, 'id'> => ({
+  group: 'wizard',
+  path: paths.addStep(step),
+  state: after(state, { type: 'wizardStepShown', step }),
+})
 
 /** One wizard scenario: the page for a step, with the wizard already on that step. */
 const wizardScenario = (
@@ -123,6 +155,19 @@ const wizardScenario = (
 // Answers for a crawler called Bouncer, as far as each step needs them.
 const named: Partial<ModelDraft> = { name: 'Bouncer', vehicleKind: 'crawler' }
 const withReceiver: Partial<ModelDraft> = { ...named, receiverTypeId: 'dumborc-x' }
+const aCar: Partial<ModelDraft> = { name: 'Rally', vehicleKind: 'carOrTruck', receiverTypeId: 'spektrum-dsmr' }
+
+// What a typical crawler has. Each takes the receiver port it is suggested: 3, 4, 5, 6, and 8 for gyro gain.
+const crawlerExtras: PickedExtra[] = [
+  ['twoSpeedTransmission', { control: 'SA' }],
+  ['frontDiffLock', { control: 'T3' }],
+  ['rearDiffLock', { control: 'T2' }],
+  ['lights', { control: 'SB' }],
+  ['cruiseControl', { control: 'SC', speedControl: 'P1' }],
+  ['gyroGain', { control: 'P2' }],
+]
+const aWinch: PickedExtra = ['customExtra', { name: 'Winch', works: 'threePositions', control: 'T5' }]
+const onExtras = wizardOn('extras', withReceiver)
 
 const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
@@ -257,14 +302,44 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'wizard-receiver-no-match': wizardScenario('receiver', named, { search: 'tamiya' }),
   'wizard-receiver-picked': wizardScenario('receiver', withReceiver),
   'wizard-receiver-cant-find': wizardScenario('receiver', named, { cantFindOpen: true }),
-  'wizard-steering-car': wizardScenario('steeringThrottle', {
-    name: 'Rally',
-    vehicleKind: 'carOrTruck',
-    receiverTypeId: 'spektrum-dsmr',
-  }),
+  'wizard-steering-car': wizardScenario('steeringThrottle', aCar),
   'wizard-steering-crawler': wizardScenario('steeringThrottle', withReceiver),
   'wizard-steering-more-options': wizardScenario('steeringThrottle', withReceiver, { moreOptionsOpen: true }),
+  'wizard-steering-boat': wizardScenario('steeringThrottle', {
+    name: 'Jet Boat',
+    vehicleKind: 'boat',
+    receiverTypeId: 'flysky-afhds2a',
+  }),
+  'wizard-extras-empty': wizardScenario('extras', aCar),
+  'wizard-extras-crawler': wizardScenario('extras', withReceiver),
+  'wizard-extras-one-open': wizardState('extras', withExtras(onExtras, ['lights'])),
+  'wizard-extras-several': wizardState('extras', folded(withExtras(onExtras, ...crawlerExtras))),
+  // A radio with two switches on its base. Three controls are in use, and the front diff lock is asking for one.
+  'wizard-extras-taken': wizardState(
+    'extras',
+    withExtras(
+      wizardOn('extras', withReceiver, {}, ready(SAMPLE_MODELS, SAMPLE_CURRENT_MODEL_ID, 'twoSwitches')),
+      ['twoSpeedTransmission', { control: 'SA' }],
+      ['lights', { control: 'SB' }],
+      ['cruiseControl', { control: 'SC', speedControl: 'P1' }],
+      ['frontDiffLock'],
+    ),
+  ),
+  // Lights has no control yet, and Next has been clicked.
+  'wizard-extras-missing': wizardState(
+    'extras',
+    after(withExtras(onExtras, ['lights'], ['frontDiffLock', { control: 'T3' }]), {
+      type: 'wizardStepTried',
+      step: 'extras',
+    }),
+  ),
+  'wizard-extras-winch': wizardState('extras', withExtras(onExtras, ['lights', { control: 'SB' }], aWinch)),
+  'wizard-extras-gyro-hint': wizardState('extras', withExtras(onExtras, ['gyroGain'])),
   'wizard-review': wizardScenario('review', withReceiver),
+  'wizard-review-crawler': wizardState(
+    'review',
+    folded(withExtras(onExtras, ...crawlerExtras, ['hornSound', { control: 'SD' }], aWinch)),
+  ),
   // The address has moved off the wizard while it is open, which is what every way of leaving does.
   'wizard-leave': { group: 'wizard', path: paths.home, state: wizardOn('receiver', withReceiver) },
   'wizard-added': {

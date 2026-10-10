@@ -5,18 +5,14 @@ import type { Model } from '../../domain/model.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './CurrentModelStrip.module.css'
-import { rowId } from './rowId.ts'
+import { scrollToRow } from './rowId.ts'
 
 const text = strings.models
 
 /** Scrolls the model's row into the middle of the window and puts keyboard focus on it. */
 function showRow(event: MouseEvent, model: Model) {
   event.preventDefault()
-  const row = document.getElementById(rowId(model.id))
-  if (!row) return
-  const lessMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  row.scrollIntoView({ block: 'center', behavior: lessMotion ? 'auto' : 'smooth' })
-  row.focus({ preventScroll: true })
+  scrollToRow(model.id)?.focus({ preventScroll: true })
 }
 
 /** Says which model the radio is set to, so nobody has to hunt through the list for it. */

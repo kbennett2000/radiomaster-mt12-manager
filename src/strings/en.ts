@@ -6,9 +6,10 @@
 
 import { APP_NAME } from '../config/app.ts'
 import type { BrandId, ReceiverTypeId } from '../domain/catalog.ts'
-import type { Direction, FeedbackKind } from '../domain/model.ts'
+import type { ExtraKind, ExtraProblem } from '../domain/extras.ts'
+import type { CustomWorks, Direction, FeedbackKind, SwitchPosition } from '../domain/model.ts'
 import type { WhenDeleting } from '../domain/positions.ts'
-import type { BaseFitting, ControlId } from '../domain/radio.ts'
+import type { BaseFitting, ControlId, ControlKind } from '../domain/radio.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
 import type { OfferedThrottleFeel, VehicleKind, WizardStepId } from '../state/wizard.ts'
 
@@ -20,6 +21,20 @@ const list = new Intl.ListFormat('en-GB', { style: 'long', type: 'conjunction' }
 export const listOf = (items: readonly string[]): string => list.format(items)
 
 const comingNextBody = 'This part of the app isn’t built yet.'
+
+// Wording for step 3 of the wizard that depends on the kind of vehicle.
+const hasWheels = (kind: VehicleKind | null): boolean => kind !== 'boat' && kind !== 'other'
+const turnsWrongWay = (kind: VehicleKind | null): string => {
+  if (kind === 'boat') return 'the boat turns the wrong way'
+  return kind === 'other' ? 'it turns the wrong way' : 'the wheels turn the wrong way'
+}
+const goesBackwards = (kind: VehicleKind | null): string => {
+  if (kind === 'boat') return 'the boat goes backwards'
+  return kind === 'other' ? 'it goes backwards' : 'the vehicle goes backwards'
+}
+
+/** Where a switch is, as the end of a sentence: "when the switch is up". */
+const switchIs: Record<SwitchPosition, string> = { up: 'up', middle: 'in the middle', down: 'down' }
 
 export const strings = {
   appName: APP_NAME,
@@ -167,6 +182,8 @@ export const strings = {
   },
 
   features: {
+    steering: 'Steering',
+    throttle: 'Throttle',
     twoSpeedTransmission: '2-speed transmission',
     frontDiffLock: 'Front diff lock',
     rearDiffLock: 'Rear diff lock',
@@ -174,7 +191,7 @@ export const strings = {
     cruiseControl: 'Cruise control',
     gyroGain: 'Gyro gain',
     dragBrake: 'Drag brake',
-    throttleArming: 'Throttle arming switch',
+    throttleSafetyLock: 'Throttle safety lock',
     throttlePresets: 'Throttle presets',
     hornSound: 'Horn sound',
     oneButtonPreset: (name: string) => `One-button preset: ${name}`,
@@ -188,15 +205,14 @@ export const strings = {
     ledColour: 'LED colour changes',
   } satisfies Record<FeedbackKind, string>,
 
-  // Radio controls: the name printed on the radio, plus a plain description.
-  // No screen shows these yet. The edit screens will.
+  // Radio controls: the name printed on the radio, plus a short description of the kind of control.
   controls: {
-    wheel: 'steering wheel',
-    trigger: 'throttle trigger',
+    wheel: 'Steering wheel',
+    trigger: 'Throttle trigger',
     SA: 'SA switch',
-    SB: 'SB switch',
-    SC: 'SC switch',
-    SD: 'SD switch',
+    SB: 'SB button',
+    SC: 'SC button',
+    SD: 'SD button',
     P1: 'P1 dial',
     P2: 'P2 dial',
     T1: 'T1 buttons',
@@ -204,7 +220,21 @@ export const strings = {
     T3: 'T3 buttons',
     T4: 'T4 buttons',
     T5: 'T5 buttons',
+    baseSwitchLeft: 'Left base switch',
+    baseSwitchRight: 'Right base switch',
+    joystickLeftRight: 'Joystick left and right',
+    joystickUpDown: 'Joystick up and down',
   } satisfies Record<ControlId, string>,
+
+  controlKinds: {
+    wheel: 'steers',
+    trigger: 'drives',
+    switch3: 'three positions',
+    switch2: 'two positions',
+    pushButton: 'springs back',
+    buttonPair: 'a pair, spring back',
+    dial: 'turns',
+  } satisfies Record<ControlKind, string>,
 
   // Receivers. Each one has the brand that makes it, what the label on it (or its box) says,
   // and the receiver type name the app shows for it.
@@ -358,13 +388,14 @@ export const strings = {
       steering: 'Steering',
       throttle: 'Throttle',
       steeringDirection: 'Steering direction',
-      steeringDirectionHelp:
-        'You can’t test this until your radio is unplugged. If the wheels turn the wrong way, come back and switch it.',
+      // A boat has no wheels, and "something else" may not have any either.
+      steeringDirectionHelp: (kind: VehicleKind | null) =>
+        `You can’t test this until your radio is unplugged. If ${turnsWrongWay(kind)}, come back and switch it.`,
       throttleDirection: 'Throttle direction',
-      throttleDirectionHelp:
-        'You can’t test this until your radio is unplugged. If the vehicle goes backwards when you pull the trigger, come back and switch it.',
+      throttleDirectionHelp: (kind: VehicleKind | null) =>
+        `You can’t test this until your radio is unplugged. If ${goesBackwards(kind)} when you pull the trigger, come back and switch it.`,
       directions: { normal: 'Normal', reversed: 'Reversed' } satisfies Record<Direction, string>,
-      travel: 'How far the wheels turn',
+      travel: (kind: VehicleKind | null) => (hasWheels(kind) ? 'How far the wheels turn' : 'How far the steering turns'),
       travelHelp: 'Lower this if the steering strains at full lock.',
       feel: 'Throttle feel',
       feelHelp:
@@ -379,8 +410,124 @@ export const strings = {
       steeringPort: 'Steering port',
       throttlePort: 'Throttle port',
       port: (port: number) => `Port ${port}`,
+      portTaken: (port: number, usedBy: string) => `Port ${port} · used by ${usedBy}`,
       samePort: (port: number) =>
         `Steering and throttle can’t both use port ${port}. Choose a different port for one of them.`,
+    },
+
+    extras: {
+      question: 'What else does your vehicle have?',
+      help: 'Pick anything your vehicle has. Skip this step if it only steers and drives.',
+      commonOnCrawlers: 'Common on crawlers',
+      // One plain sentence for each extra.
+      about: {
+        twoSpeedTransmission: 'Shifts between low gear and high gear.',
+        frontDiffLock: 'Locks the front wheels together for more grip.',
+        rearDiffLock: 'Locks the rear wheels together for more grip.',
+        lights: 'Turns the vehicle’s lights on and off.',
+        cruiseControl: 'Holds a steady speed so you can walk behind and just steer.',
+        gyroGain: 'Sets how strongly a steering gyro corrects. Only if your receiver has a gyro.',
+        dragBrake:
+          'Sets how hard the vehicle brakes when you let go of the trigger. Only if your speed controller supports it.',
+        throttleSafetyLock: 'The trigger does nothing until you unlock it.',
+        hornSound: 'Your radio plays a horn when you press a button.',
+        customExtra: 'Anything not listed, such as a winch or a mode switch. You name it.',
+      } satisfies Record<ExtraKind, string>,
+      somethingElse: 'Something else',
+      addAnother: 'Add another “Something else”',
+
+      nameLabel: 'What is it called?',
+      nameHint: (max: number) => `Up to ${max} characters.`,
+      nameCount: (used: number, max: number) => `${used} of ${max} characters`,
+      worksQuestion: 'How does it work?',
+      works: {
+        onOff: { label: 'On and off', description: 'It is either on or off.' },
+        threePositions: { label: 'Three positions', description: 'Such as a winch: in, stop and out.' },
+        dial: { label: 'A dial', description: 'You set it to any amount.' },
+      } satisfies Record<CustomWorks, { label: string; description: string }>,
+
+      controlQuestion: 'Which control works it?',
+      cruiseOnOffQuestion: 'Which control turns it on and off?',
+      cruiseSpeedQuestion: 'Which dial sets the speed?',
+      usedBy: (name: string) => `used by ${name}`,
+      positionQuestion: 'Which position turns it on?',
+      lockPositionQuestion: 'Which position unlocks the trigger?',
+      positions: { up: 'Up', middle: 'Middle', down: 'Down' } satisfies Record<SwitchPosition, string>,
+      swap: 'Swap high and low',
+
+      portQuestion: 'Which receiver port is it plugged into?',
+      port: (port: number) => `Port ${port}`,
+      gyroHint: (port: number) => `This receiver uses port ${port} for gyro gain.`,
+
+      // Said when nothing of the needed kind is left to pick.
+      noControlFree:
+        'Every control that could work this is already in use. To use one here, first take it off another extra.',
+      noDialFree: 'Every dial is already in use. To use one here, first take it off another extra.',
+      noPortFree:
+        'Every receiver port from 3 to 8 is already in use. To free one, take it off another extra.',
+
+      problems: {
+        nameMissing: 'Type a name for it.',
+        nameTooLong: (used: number, max: number) => `That name is ${used} characters long. It can be ${max} at most.`,
+        worksMissing: 'Choose how it works.',
+        controlMissing: 'Choose the control that works it.',
+        speedControlMissing: 'Choose the dial that sets the speed.',
+        portMissing: 'Choose the receiver port it is plugged into.',
+      } satisfies Record<ExtraProblem, string | ((used: number, max: number) => string)>,
+
+      done: 'Done',
+      change: 'Change',
+      changeNamed: (name: string) => `Change ${name}`,
+      notFinished: 'Not finished yet.',
+      // The folded-down line for an answered extra: its controls and, if it has one, its port.
+      summaryPort: (port: number) => `port ${port}`,
+    },
+
+    // How a control works an extra, in one sentence. Review and step 4 both use these.
+    how: {
+      onOff: {
+        pushButton: 'Press once to turn it on. Press again to turn it off.',
+        buttonPair: 'One button turns it on. The other turns it off.',
+        switch3: (on: SwitchPosition) =>
+          `It is on when the switch is ${switchIs[on]}, and off in the other two positions.`,
+        switch2: 'On in one position, off in the other.',
+      },
+      // For the throttle safety lock, "on" would be unclear: it could mean locked or unlocked.
+      lock: {
+        pushButton: 'Press once to unlock the trigger. Press again to lock it.',
+        buttonPair: 'One button unlocks the trigger. The other locks it.',
+        switch3: (on: SwitchPosition) =>
+          `The trigger is unlocked when the switch is ${switchIs[on]}, and locked in the other two positions.`,
+        switch2: 'The trigger is unlocked in one position and locked in the other.',
+      },
+      twoSpeed: {
+        pushButton: 'Press to change between low and high gear.',
+        buttonPair: 'One button picks high gear. The other picks low gear.',
+        switch3: (swapped: boolean) =>
+          swapped
+            ? 'Up is low gear, middle is neutral, down is high gear.'
+            : 'Up is high gear, middle is neutral, down is low gear.',
+        switch2: 'One position is high gear. The other is low gear.',
+      },
+      threePositions: {
+        switch3: 'Up, middle and down are its three positions.',
+        buttonPair: 'Hold one button for one direction, the other for the opposite. Let go and it stops.',
+      },
+      dial: 'Turn the dial to set it.',
+      horn: {
+        pushButton: 'Press the button and your radio plays the horn.',
+        buttonPair: 'Press either button and your radio plays the horn.',
+      },
+      cruiseOnOff: {
+        pushButton: 'Press once to turn it on. Press again to turn it off.',
+        switch2: 'On in one position, off in the other.',
+      },
+      cruiseSpeed: 'Turn the dial to set the speed.',
+      steering: 'Turn the wheel to steer.',
+      throttle: 'Pull the trigger to drive.',
+      // Cruise control uses two controls, so each one says which part it does.
+      cruiseOnOffPart: 'on and off',
+      cruiseSpeedPart: 'speed',
     },
 
     review: {
@@ -395,10 +542,23 @@ export const strings = {
       change: 'Change',
       changeNamed: (what: string) => `Change ${what.toLowerCase()}`,
       direction: { normal: 'Normal direction', reversed: 'Reversed direction' } satisfies Record<Direction, string>,
-      travel: (value: number) => `Wheels turn ${value}%`,
+      travel: (value: number, kind: VehicleKind | null) =>
+        hasWheels(kind) ? `Wheels turn ${value}%` : `Steering turns ${value}%`,
       feel: { standard: 'Standard feel', gentle: 'Gentle feel' } satisfies Record<OfferedThrottleFeel, string>,
       topSpeed: (value: number) => `Top speed limit ${value}%`,
-      comingNext: 'Extras, radio feedback and binding are coming next.',
+      extrasNone: 'None',
+      extrasLabel: 'Extras',
+      port: (port: number) => `Port ${port}`,
+      controlsTitle: 'What each control does',
+      controlsHelp: 'Every control on your radio, and what it does on this model.',
+      notUsed: 'Not used',
+      // "2-speed transmission. Up is high gear…" or, for cruise control, "Cruise control, speed. Turn the dial…"
+      job: (name: string, how: string | null) => (how ? `${name}. ${how}` : `${name}.`),
+      jobPart: (name: string, part: string) => `${name}, ${part}`,
+      portsTitle: 'What to plug into your receiver',
+      portsHelp: 'The ports are numbered on the receiver’s case.',
+      nothing: 'Nothing',
+      comingNext: 'Radio feedback and binding are coming next.',
       confirm: 'Add to my radio',
     },
 
@@ -563,7 +723,17 @@ export const strings = {
       'wizard-steering-car': 'Step 3: for a car',
       'wizard-steering-crawler': 'Step 3: for a crawler',
       'wizard-steering-more-options': 'Step 3: More options open',
-      'wizard-review': 'Review',
+      'wizard-steering-boat': 'Step 3: for a boat',
+      'wizard-extras-empty': 'Step 4: nothing picked',
+      'wizard-extras-crawler': 'Step 4: a crawler, with the labels',
+      'wizard-extras-one-open': 'Step 4: one extra open',
+      'wizard-extras-several': 'Step 4: six extras picked',
+      'wizard-extras-taken': 'Step 4: a taken control',
+      'wizard-extras-missing': 'Step 4: a missing answer',
+      'wizard-extras-winch': 'Step 4: “Something else” as a winch',
+      'wizard-extras-gyro-hint': 'Step 4: gyro gain, with the port 8 hint',
+      'wizard-review': 'Review: no extras',
+      'wizard-review-crawler': 'Review: a full crawler',
       'wizard-leave': 'The leave question',
       'wizard-added': 'The list after adding',
       'finish-and-unplug': 'Before you unplug',

@@ -1,7 +1,7 @@
 // Sample data for the mockups. Later cycles read the same types from the radio's real files.
 
 import type { ReceiverTypeId } from '../domain/catalog.ts'
-import type { Feature, FeedbackKind, Model, ModelId } from '../domain/model.ts'
+import type { CustomWorks, Feature, FeedbackKind, Model, ModelId } from '../domain/model.ts'
 import type { ControlId } from '../domain/radio.ts'
 
 // Every model has steering on the wheel (receiver port 1) and throttle on the trigger (receiver port 2).
@@ -20,12 +20,15 @@ const throttleWithCustomFeel: Feature = { ...throttle, feel: 'custom' }
 const twoSpeed = (control: ControlId, port: number): Feature => ({ kind: 'twoSpeedTransmission', control, port })
 const frontDiffLock = (control: ControlId, port: number): Feature => ({ kind: 'frontDiffLock', control, port })
 const rearDiffLock = (control: ControlId, port: number): Feature => ({ kind: 'rearDiffLock', control, port })
-const lights = (control: ControlId, port: number): Feature => ({ kind: 'lights', control, port })
+// On the SA switch, which has three positions, the lights are on when it is up.
+const lights = (control: ControlId, port: number): Feature =>
+  control === 'SA' ? { kind: 'lights', control, port, onPosition: 'up' } : { kind: 'lights', control, port }
 const gyroGain = (control: ControlId, port: number): Feature => ({ kind: 'gyroGain', control, port })
 const dragBrake = (control: ControlId, port: number): Feature => ({ kind: 'dragBrake', control, port })
-const customExtra = (name: string, control: ControlId, port: number): Feature => ({
+const customExtra = (name: string, works: CustomWorks, control: ControlId, port: number): Feature => ({
   kind: 'customExtra',
   name,
+  works,
   control,
   port,
 })
@@ -34,7 +37,7 @@ const cruiseControl = (onOffControl: ControlId, speedControl: ControlId): Featur
   onOffControl,
   speedControl,
 })
-const throttleArming = (control: ControlId): Feature => ({ kind: 'throttleArming', control })
+const throttleSafetyLock = (control: ControlId): Feature => ({ kind: 'throttleSafetyLock', control })
 const throttlePresets = (control: ControlId): Feature => ({ kind: 'throttlePresets', control })
 const hornSound = (control: ControlId): Feature => ({ kind: 'hornSound', control })
 const oneButtonPreset = (name: string, control: ControlId): Feature => ({ kind: 'oneButtonPreset', name, control })
@@ -87,7 +90,7 @@ export const SAMPLE_MODELS: readonly Model[] = [
       twoSpeed('SA', 3),
       frontDiffLock('T3', 4),
       rearDiffLock('T2', 5),
-      customExtra('Trail Tracer mode', 'SB', 6),
+      customExtra('Trail Tracer mode', 'onOff', 'SB', 6),
       gyroGain('P2', 8),
       cruiseControl('SC', 'P1'),
       oneButtonPreset('Locked + low gear', 'SD'),
@@ -107,7 +110,7 @@ export const SAMPLE_MODELS: readonly Model[] = [
     ],
     ['beeps', 'vibration'],
   ),
-  model(8, 'Slash 2WD', 'dumborc-x', [throttleArming('SC'), gyroGain('P2', 8), hornSound('SB')]),
+  model(8, 'Slash 2WD', 'dumborc-x', [throttleSafetyLock('SC'), gyroGain('P2', 8), hornSound('SB')]),
   model(9, 'Tarantula', 'spektrum-dsmr', [], [], [steering, throttleWithCustomFeel]),
   model(10, 'Slash 4x4', 'dumborc-x', [gyroGain('P2', 8)]),
   model(11, 'Micro B', 'spektrum-slt'),
@@ -117,7 +120,7 @@ export const SAMPLE_MODELS: readonly Model[] = [
   model(15, 'MojaveGrm2', 'spektrum-slt'),
   model(16, 'SC10b', 'dumborc-x', [gyroGain('P2', 8)]),
   model(17, 'Maxx', 'dumborc-x', [gyroGain('P1', 8)]),
-  model(18, 'Airboat', 'dumborc-x', [throttlePresets('SA'), customExtra('Port 8 dial', 'P1', 8)]),
+  model(18, 'Airboat', 'dumborc-x', [throttlePresets('SA'), customExtra('Port 8 dial', 'dial', 'P1', 8)]),
   model(19, 'Hyper SSE', 'spektrum-dsmr', [hornSound('SD')]),
   model(20, 'Mini 8ight', 'dumborc-x', [gyroGain('P2', 8)]),
 ]

@@ -95,12 +95,20 @@
   min-width: 0;
 }
 
+/*
+ * Back, Next and Cancel. On a step taller than the window they stay in view at the bottom of it,
+ * and the step scrolls behind them.
+ */
 .actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding-top: var(--space-5);
+  padding: var(--space-4) 0;
   border-top: var(--border-thin) solid var(--color-border);
+  background: var(--color-page);
 }
 
 .cancel {

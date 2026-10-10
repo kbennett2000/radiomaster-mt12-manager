@@ -105,10 +105,34 @@
   justify-content: start;
 }
 
+/* As many columns as fit, all the same width. For longer lists of choices, such as controls. */
+.wordsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--choice-min-width), 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
 .wordCard {
   gap: var(--space-1);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-medium);
+}
+
+/* A choice that cannot be picked: something else already uses it, and the card says what. */
+.wordCard:has(.radio:disabled) {
+  border-style: dashed;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.wordCard:has(.radio:disabled):hover {
+  border-color: var(--color-border);
+}
+
+.wordNote {
+  color: var(--color-text-muted);
 }
 
 .wordLabel {
@@ -122,7 +146,7 @@
 }
 
 .problem {
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
   color: var(--color-danger);
   font-weight: var(--weight-medium);
 }

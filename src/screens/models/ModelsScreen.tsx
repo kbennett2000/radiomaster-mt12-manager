@@ -1,4 +1,4 @@
-import type { Dispatch } from 'react'
+import { useCallback, type Dispatch } from 'react'
 import { Button, ButtonLink } from '../../components/Button.tsx'
 import { CloseIcon, PlusIcon, UndoIcon } from '../../components/icons.tsx'
 import { Notice } from '../../components/Notice.tsx'
@@ -196,6 +196,7 @@ export function ModelsScreen({ state, dispatch, onAdd }: ModelsScreenProps) {
   const empty = state.models.length === 0
   const current = state.models.find((model) => model.id === state.currentModelId)
   const explainFull = () => dispatch({ type: 'addRequestedWhileFull' })
+  const newModelMarked = useCallback(() => dispatch({ type: 'newModelMarked' }), [dispatch])
 
   return (
     <div className={styles.page}>
@@ -229,6 +230,8 @@ export function ModelsScreen({ state, dispatch, onAdd }: ModelsScreenProps) {
             onDelete={(modelId) => dispatch({ type: 'deleteRequested', modelId })}
             onCloseUp={() => dispatch({ type: 'emptyPlacesClosedUp' })}
             onAddAt={onAdd}
+            newModelId={state.newModelId}
+            onNewModelMarked={newModelMarked}
           />
         </>
       )}
