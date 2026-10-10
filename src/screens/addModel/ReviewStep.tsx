@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
+import { switches, type ExtraAnswers } from '../../domain/extras.ts'
+import { givesFeedback } from '../../domain/feedback.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { modelFrom, throttleFeelOf, type BuiltStepId } from '../../state/wizard.ts'
-import { strings } from '../../strings/en.ts'
+import { listOf, strings } from '../../strings/en.ts'
 import { extraName, whatEachControlDoes, whatPlugsIn } from './describe.ts'
 import styles from './ReviewStep.module.css'
 import type { StepProps } from './stepProps.ts'
@@ -32,6 +34,17 @@ function Row({ label, changeOn, children }: RowProps) {
   )
 }
 
+/** One extra's feedback in a few words, such as "Lights: beep, vibration and blue light". */
+function feedbackWords(extra: ExtraAnswers): string {
+  const { sound, vibration, lightColour } = extra.feedback
+  const parts = [
+    sound === 'off' ? null : text.feedbackSound[sound],
+    vibration ? text.feedbackVibration : null,
+    lightColour ? text.feedbackColour(strings.addModel.feedback.colours[lightColour]) : null,
+  ].filter((part) => part !== null)
+  return text.extraFeedback(extraName(extra), listOf(parts))
+}
+
 /**
  * Step 6: everything that was answered, with a way back to each step. Below the summary it turns
  * the answers round two ways: what each control on the radio does, and what plugs into each
@@ -40,6 +53,7 @@ function Row({ label, changeOn, children }: RowProps) {
 export function ReviewStep({ draft, baseFitting }: StepProps) {
   // The same model "Add to my radio" will add, built here only to describe it.
   const features = modelFrom(draft, 'review', draft.position)?.features ?? []
+  const withFeedback = draft.extras.filter((extra) => switches(extra) && givesFeedback(extra.feedback))
 
   return (
     <div className={stepStyles.step}>
@@ -73,6 +87,15 @@ export function ReviewStep({ draft, baseFitting }: StepProps) {
             {extra.port !== null && <span>{text.port(extra.port)}</span>}
           </Row>
         ))}
+        <Row label={text.feedbackLabel} changeOn="feedback">
+          {draft.lightColour === null && withFeedback.length === 0 && text.feedbackNone}
+          {draft.lightColour !== null && (
+            <span>{text.modelColour(strings.addModel.feedback.colours[draft.lightColour])}</span>
+          )}
+          {withFeedback.map((extra) => (
+            <span key={extra.id}>{feedbackWords(extra)}</span>
+          ))}
+        </Row>
       </dl>
 
       <section className={styles.section}>
@@ -101,7 +124,7 @@ export function ReviewStep({ draft, baseFitting }: StepProps) {
         </dl>
       </section>
 
-      <p className={styles.comingNext}>{text.comingNext}</p>
+      <p className={styles.afterThis}>{text.afterThis}</p>
     </div>
   )
 }

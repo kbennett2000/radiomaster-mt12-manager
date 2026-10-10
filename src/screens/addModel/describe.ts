@@ -116,3 +116,27 @@ export const whatPlugsIn = (features: readonly Feature[]): PortLine[] =>
     const names = features.filter((feature) => portOf(feature) === port).map(featureName)
     return { port, what: names.length > 0 ? names.join(', ') : null }
   })
+
+/** The words Voice would say as an extra switches, one for each state it can be in. */
+export function voiceWords(extra: ExtraAnswers): readonly string[] {
+  const voice = strings.addModel.feedback.voice
+  switch (extra.kind) {
+    case 'twoSpeedTransmission':
+      // On the three-position switch the middle is neutral, so it has a word too.
+      return extra.control && controlKind(extra.control) === 'switch3'
+        ? voice.twoSpeedWithNeutral
+        : voice.twoSpeedTransmission
+    case 'frontDiffLock':
+    case 'rearDiffLock':
+    case 'lights':
+    case 'cruiseControl':
+    case 'throttleSafetyLock':
+      return voice[extra.kind]
+    case 'customExtra':
+      return extra.works === 'threePositions'
+        ? voice.threePositions(extraName(extra))
+        : voice.onOff(extraName(extra))
+    default:
+      return []
+  }
+}

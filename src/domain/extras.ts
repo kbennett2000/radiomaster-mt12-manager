@@ -6,7 +6,8 @@
 // Nothing here depends on a screen. The wizard asks these functions what to offer and what is taken.
 
 import { EXTRA_PORTS, controlKind, controlsFor, gyroGainPortFor, type ReceiverTypeId } from './catalog.ts'
-import type { CustomWorks, Feature, SwitchPosition } from './model.ts'
+import { givesFeedback, NO_FEEDBACK } from './feedback.ts'
+import type { CustomWorks, ExtraFeedback, Feature, SwitchPosition } from './model.ts'
 import type { BaseFitting, ControlDefinition, ControlId, ControlKind } from './radio.ts'
 
 /** The extras the wizard offers, in the order it lists them. "Something else" can be added more than once. */
@@ -85,6 +86,8 @@ export interface ExtraAnswers {
   name: string
   /** "Something else" only: how it works. */
   works: CustomWorks | null
+  /** How the radio tells the driver it has switched. Only used by an extra that switches. */
+  feedback: ExtraFeedback
 }
 
 export function newExtra(id: string, kind: ExtraKind): ExtraAnswers {
@@ -98,6 +101,7 @@ export function newExtra(id: string, kind: ExtraKind): ExtraAnswers {
     swapped: false,
     name: '',
     works: null,
+    feedback: NO_FEEDBACK,
   }
 }
 
@@ -116,6 +120,15 @@ export function workingOf(extra: Pick<ExtraAnswers, 'kind' | 'works'>, role: Con
   if (role === 'speed') return extra.kind === 'cruiseControl' ? 'cruiseSpeed' : null
   const working = EXTRAS[extra.kind].working
   return working === 'chosen' ? extra.works : working
+}
+
+/**
+ * True for an extra that switches between states, which the radio can announce. A dial is set to
+ * any amount, so it does not, and neither does the horn.
+ */
+export function switches(extra: Pick<ExtraAnswers, 'kind' | 'works'>): boolean {
+  const working = workingOf(extra)
+  return working === 'onOff' || working === 'twoSpeed' || working === 'threePositions' || working === 'cruiseOnOff'
 }
 
 const controlFor = (extra: ExtraAnswers, role: ControlRole): ControlId | null =>
@@ -247,14 +260,16 @@ export function featureFrom(extra: ExtraAnswers): Feature | null {
   if (problemsInExtra(extra).length > 0 || control === null) return null
   // Which position is "on" only means something on a three-position switch.
   const onPosition = controlKind(control) === 'switch3' ? { onPosition: extra.onPosition } : {}
+  // Feedback is recorded only when the radio does something, and only for an extra that switches.
+  const feedback = switches(extra) && givesFeedback(extra.feedback) ? { feedback: extra.feedback } : {}
 
   switch (extra.kind) {
     case 'cruiseControl':
       return extra.speedControl === null
         ? null
-        : { kind: 'cruiseControl', onOffControl: control, speedControl: extra.speedControl }
+        : { kind: 'cruiseControl', onOffControl: control, speedControl: extra.speedControl, ...feedback }
     case 'throttleSafetyLock':
-      return { kind: 'throttleSafetyLock', control, ...onPosition }
+      return { kind: 'throttleSafetyLock', control, ...onPosition, ...feedback }
     case 'hornSound':
       return { kind: 'hornSound', control }
   }
@@ -263,20 +278,20 @@ export function featureFrom(extra: ExtraAnswers): Feature | null {
   switch (extra.kind) {
     case 'twoSpeedTransmission':
       return controlKind(control) === 'switch3' && extra.swapped
-        ? { kind: 'twoSpeedTransmission', control, port, swapped: true }
-        : { kind: 'twoSpeedTransmission', control, port }
+        ? { kind: 'twoSpeedTransmission', control, port, swapped: true, ...feedback }
+        : { kind: 'twoSpeedTransmission', control, port, ...feedback }
     case 'frontDiffLock':
     case 'rearDiffLock':
     case 'lights':
-      return { kind: extra.kind, control, port, ...onPosition }
+      return { kind: extra.kind, control, port, ...onPosition, ...feedback }
     case 'gyroGain':
     case 'dragBrake':
       return { kind: extra.kind, control, port }
     case 'customExtra':
       if (!extra.works) return null
       return extra.works === 'onOff'
-        ? { kind: 'customExtra', name: extra.name.trim(), works: extra.works, control, port, ...onPosition }
-        : { kind: 'customExtra', name: extra.name.trim(), works: extra.works, control, port }
+        ? { kind: 'customExtra', name: extra.name.trim(), works: extra.works, control, port, ...onPosition, ...feedback }
+        : { kind: 'customExtra', name: extra.name.trim(), works: extra.works, control, port, ...feedback }
   }
 }
 

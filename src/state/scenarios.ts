@@ -66,9 +66,14 @@ export const SCENARIO_IDS = [
   'wizard-extras-missing',
   'wizard-extras-winch',
   'wizard-extras-gyro-hint',
+  'wizard-feedback-none',
+  'wizard-feedback-rows',
+  'wizard-feedback-voice',
+  'wizard-feedback-clash',
   'wizard-review',
   'wizard-review-crawler',
   'wizard-leave',
+  'wizard-bind',
   'wizard-added',
   'finish-and-unplug',
   'finish-disconnected',
@@ -168,6 +173,9 @@ const crawlerExtras: PickedExtra[] = [
 ]
 const aWinch: PickedExtra = ['customExtra', { name: 'Winch', works: 'threePositions', control: 'T5' }]
 const onExtras = wizardOn('extras', withReceiver)
+
+const fullCrawler = folded(withExtras(onExtras, ...crawlerExtras, ['hornSound', { control: 'SD' }], aWinch))
+const fullCrawlerAdded = after(fullCrawler, { type: 'wizardStepShown', step: 'review' }, { type: 'wizardFinished' })
 
 const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
@@ -335,18 +343,40 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   ),
   'wizard-extras-winch': wizardState('extras', withExtras(onExtras, ['lights', { control: 'SB' }], aWinch)),
   'wizard-extras-gyro-hint': wizardState('extras', withExtras(onExtras, ['gyroGain'])),
+  // A car with only gyro gain, which is a dial and so does not switch.
+  'wizard-feedback-none': wizardState('feedback', folded(withExtras(wizardOn('extras', aCar), ['gyroGain', { control: 'P1' }]))),
+  'wizard-feedback-rows': wizardState('feedback', folded(withExtras(onExtras, ...crawlerExtras))),
+  'wizard-feedback-voice': wizardState(
+    'feedback',
+    after(
+      folded(withExtras(onExtras, ...crawlerExtras)),
+      { type: 'wizardChanged', draft: { lightColour: 'green' } },
+      { type: 'wizardExtraChanged', id: 'frontDiffLock', answers: { feedback: { sound: 'voice', vibration: true, lightColour: null } } },
+      { type: 'wizardExtraChanged', id: 'lights', answers: { feedback: { sound: 'beep', vibration: false, lightColour: null } } },
+    ),
+  ),
+  'wizard-feedback-clash': wizardState(
+    'feedback',
+    after(
+      folded(withExtras(onExtras, ...crawlerExtras)),
+      { type: 'wizardExtraChanged', id: 'frontDiffLock', answers: { feedback: { sound: 'beep', vibration: false, lightColour: 'orange' } } },
+      { type: 'wizardExtraChanged', id: 'rearDiffLock', answers: { feedback: { sound: 'beep', vibration: false, lightColour: 'red' } } },
+    ),
+  ),
   'wizard-review': wizardScenario('review', withReceiver),
   'wizard-review-crawler': wizardState(
     'review',
-    folded(withExtras(onExtras, ...crawlerExtras, ['hornSound', { control: 'SD' }], aWinch)),
+    after(
+      fullCrawler,
+      { type: 'wizardChanged', draft: { lightColour: 'green' } },
+      { type: 'wizardExtraChanged', id: 'frontDiffLock', answers: { feedback: { sound: 'voice', vibration: true, lightColour: null } } },
+    ),
   ),
   // The address has moved off the wizard while it is open, which is what every way of leaving does.
   'wizard-leave': { group: 'wizard', path: paths.home, state: wizardOn('receiver', withReceiver) },
-  'wizard-added': {
-    group: 'wizard',
-    path: paths.home,
-    state: after(wizardOn('review', withReceiver), { type: 'wizardFinished' }),
-  },
+  // The same full crawler, just added. The wizard's last page shows first, then the list.
+  'wizard-bind': { group: 'wizard', path: paths.bind, state: fullCrawlerAdded },
+  'wizard-added': { group: 'wizard', path: paths.home, state: fullCrawlerAdded },
 
   'finish-and-unplug': { group: 'finish', path: paths.finish, state: ready() },
   'finish-disconnected': { group: 'finish', path: paths.home, state: after(ready(), { type: 'disconnected' }) },

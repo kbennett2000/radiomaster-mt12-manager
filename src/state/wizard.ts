@@ -1,7 +1,7 @@
 // The "Add a model" wizard: its steps, the answers gathered so far, and how they become a model.
 // Nothing here touches the list of models. That only changes when the person finishes.
 
-import { MT12, type ReceiverTypeId } from '../domain/catalog.ts'
+import { MT12, type LightColour, type ReceiverTypeId } from '../domain/catalog.ts'
 import {
   EXTRA_KINDS,
   featureFrom,
@@ -21,12 +21,12 @@ import { checkModelName, type ModelNameProblem } from '../domain/modelName.ts'
 export const WIZARD_STEPS = ['name', 'receiver', 'steeringThrottle', 'extras', 'feedback', 'review', 'bind'] as const
 export type WizardStepId = (typeof WIZARD_STEPS)[number]
 
-/** The steps that are built so far, in order. Next and Back skip the others. */
-export const BUILT_STEPS = ['name', 'receiver', 'steeringThrottle', 'extras', 'review'] as const
+/**
+ * The steps that ask for answers, in order. Back and Next move through these. The last step of
+ * the wizard, Bind your receiver, comes after the model has been added, so it is not one of them.
+ */
+export const BUILT_STEPS = ['name', 'receiver', 'steeringThrottle', 'extras', 'feedback', 'review'] as const
 export type BuiltStepId = (typeof BUILT_STEPS)[number]
-
-export const isBuilt = (step: WizardStepId): step is BuiltStepId =>
-  (BUILT_STEPS as readonly WizardStepId[]).includes(step)
 
 export const stepAfter = (step: BuiltStepId): BuiltStepId | null => BUILT_STEPS[BUILT_STEPS.indexOf(step) + 1] ?? null
 export const stepBefore = (step: BuiltStepId): BuiltStepId | null => BUILT_STEPS[BUILT_STEPS.indexOf(step) - 1] ?? null
@@ -69,6 +69,8 @@ export interface ModelDraft {
   extras: readonly ExtraAnswers[]
   /** How many extras have ever been picked. Used to give each "Something else" an id of its own. */
   extrasPicked: number
+  /** The colour the radio's lights show while it is set to this model. Null leaves them alone. */
+  lightColour: LightColour | null
 }
 
 /** Parts of the wizard's screens that are not answers. */
@@ -109,6 +111,7 @@ export function newWizard(position: number): WizardState {
       throttlePort: 2,
       extras: [],
       extrasPicked: 0,
+      lightColour: null,
     },
     view: { search: '', cantFindOpen: false, moreOptionsOpen: false, openExtraId: null },
     tried: [],
@@ -235,6 +238,8 @@ export function modelFrom(draft: ModelDraft, id: ModelId, position: number): Mod
       },
       ...extras.flatMap((feature) => feature ?? []),
     ],
+    // Feedback is kept on each extra. Nothing here is set for the model as a whole.
     feedback: [],
+    lightColour: draft.lightColour,
   }
 }

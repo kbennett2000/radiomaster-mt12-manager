@@ -1,3 +1,4 @@
+import { feedbackKindsOf } from '../../domain/feedback.ts'
 import type { Feature, Model } from '../../domain/model.ts'
 import { listOf, strings } from '../../strings/en.ts'
 
@@ -27,7 +28,7 @@ function tagFor(feature: Feature): string | null {
 
 /** What to show on a model's row: its extras as tags, and the radio's feedback more quietly. */
 export function tagsFor(model: Model): ModelTags {
-  const feedback = model.feedback.map((kind) => strings.feedback[kind])
+  const feedback = feedbackKindsOf(model).map((kind) => strings.feedback[kind])
   return {
     extras: model.features.flatMap((feature) => tagFor(feature) ?? []),
     feedback: feedback.length > 0 ? strings.tags.feedback(listOf(feedback)) : null,

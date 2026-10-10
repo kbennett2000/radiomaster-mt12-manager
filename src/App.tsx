@@ -5,6 +5,7 @@ import { MT12 } from './domain/catalog.ts'
 import { ReviewerPanel } from './review/ReviewerPanel.tsx'
 import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from './sample/sampleModels.ts'
 import { AddModelScreen } from './screens/addModel/AddModelScreen.tsx'
+import { BindScreen } from './screens/addModel/BindScreen.tsx'
 import { ConnectScreen } from './screens/connect/ConnectScreen.tsx'
 import { FinishScreen } from './screens/finish/FinishScreen.tsx'
 import { ModelsScreen } from './screens/models/ModelsScreen.tsx'
@@ -47,16 +48,20 @@ function App({ initialState }: { initialState: AppState }) {
   const ready = isReady(state)
   const text = strings.comingNext
   const wizard = ready ? state.wizard : null
-  const onWizardPage = route.name === 'addModel'
+  const onWizardPage = route.name === 'addModel' || route.name === 'bind'
   const wizardStep = route.name === 'addModel' ? route.step : null
+  // The model the wizard added last. The wizard's last page, Bind your receiver, is about it.
+  const justAdded = ready ? state.models.find((model) => model.id === state.lastAddedModelId) : undefined
+  const onBindPage = route.name === 'bind' && !wizard && justAdded !== undefined
 
   // Keep a note of the step on screen, so the wizard can stay put if the person starts to leave.
-  // A wizard page with no wizard open (a stale address, or just after finishing) goes to the list.
+  // A wizard page with nothing to show goes to the list: a stale address, or a step of a wizard
+  // that has already added its model. That is what stops the browser's Back adding it twice.
   useEffect(() => {
-    if (!ready || !wizardStep) return
-    if (!wizard) redirectTo(paths.home)
-    else if (wizard.step !== wizardStep) dispatch({ type: 'wizardStepShown', step: wizardStep })
-  }, [ready, wizard, wizardStep])
+    if (!ready || !onWizardPage) return
+    if (wizard && wizardStep && wizard.step !== wizardStep) dispatch({ type: 'wizardStepShown', step: wizardStep })
+    else if (!wizard && !onBindPage) redirectTo(paths.home)
+  }, [ready, onWizardPage, wizard, wizardStep, onBindPage])
 
   // The address is changed first each time, so the page and the state never disagree for a moment.
   function startWizard(position?: number) {
@@ -93,11 +98,13 @@ function App({ initialState }: { initialState: AppState }) {
         onKeepGoing={() => goTo(paths.addStep(wizard.step))}
         onLeave={() => dispatch({ type: 'wizardLeft' })}
         onFinished={() => {
-          goTo(paths.home)
+          goTo(paths.bind)
           dispatch({ type: 'wizardFinished' })
         }}
       />
     )
+  } else if (onBindPage && justAdded) {
+    screen = <BindScreen model={justAdded} />
   } else if (onWizardPage) {
     screen = null
   } else if (modelToEdit) {

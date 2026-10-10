@@ -1,32 +1,30 @@
 import { useEffect, type Dispatch, type FormEvent } from 'react'
 import { Button } from '../../components/Button.tsx'
 import { Dialog, DialogActions } from '../../components/Dialog.tsx'
-import { BackIcon, CheckIcon, PlusIcon } from '../../components/icons.tsx'
+import { BackIcon, PlusIcon } from '../../components/icons.tsx'
 import type { Model } from '../../domain/model.ts'
 import type { BaseFitting } from '../../domain/radio.ts'
 import type { Action } from '../../state/appState.ts'
 import { goTo, paths, redirectTo } from '../../state/useHashRoute.ts'
 import {
-  BUILT_STEPS,
-  isBuilt,
   problemsIn,
   stepAfter,
   stepBefore,
   stepBlocking,
   stepIsFine,
-  WIZARD_STEPS,
   type BuiltStepId,
   type WizardState,
-  type WizardStepId,
 } from '../../state/wizard.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './AddModelScreen.module.css'
 import { NameStep } from './NameStep.tsx'
 import { ExtrasStep } from './ExtrasStep.tsx'
+import { FeedbackStep } from './FeedbackStep.tsx'
 import { ReceiverStep } from './ReceiverStep.tsx'
 import { ReviewStep } from './ReviewStep.tsx'
 import { SteeringThrottleStep } from './SteeringThrottleStep.tsx'
 import type { StepProps } from './stepProps.ts'
+import { WizardFrame } from './WizardFrame.tsx'
 
 interface AddModelScreenProps {
   wizard: WizardState
@@ -52,46 +50,8 @@ const stepScreens: Record<BuiltStepId, (props: StepProps) => React.ReactNode> = 
   receiver: ReceiverStep,
   steeringThrottle: SteeringThrottleStep,
   extras: ExtrasStep,
+  feedback: FeedbackStep,
   review: ReviewStep,
-}
-
-/** Where a step stands compared with the one on screen. */
-type StepStanding = 'done' | 'current' | 'ahead' | 'later'
-
-function standingOf(step: WizardStepId, shown: BuiltStepId): StepStanding {
-  if (!isBuilt(step)) return 'later'
-  if (step === shown) return 'current'
-  return BUILT_STEPS.indexOf(step) < BUILT_STEPS.indexOf(shown) ? 'done' : 'ahead'
-}
-
-/** All seven steps by name, with where the person is. Steps that are not built yet say so. */
-function Progress({ shown }: { shown: BuiltStepId }) {
-  return (
-    <nav className={styles.progress} aria-label={text.stepsLabel}>
-      <ol className={styles.steps}>
-        {WIZARD_STEPS.map((step, index) => {
-          const standing = standingOf(step, shown)
-          return (
-            <li
-              key={step}
-              className={styles.stepItem}
-              data-standing={standing}
-              aria-current={standing === 'current' ? 'step' : undefined}
-            >
-              <span className={styles.badge} aria-hidden="true">
-                {standing === 'done' ? <CheckIcon /> : index + 1}
-              </span>
-              <span>
-                <span className={styles.stepName}>{text.stepNames[step]}</span>
-                {standing === 'done' && <span className="visually-hidden"> ({text.done})</span>}
-                {standing === 'later' && <span className={styles.later}>{text.comingNext}</span>}
-              </span>
-            </li>
-          )
-        })}
-      </ol>
-    </nav>
-  )
 }
 
 /**
@@ -136,50 +96,41 @@ export function AddModelScreen({
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.top}>
-        <h1>{text.title}</h1>
-        <p className={styles.where}>{text.goesIn(wizard.draft.position)}</p>
-      </div>
+    <WizardFrame shown={shown} where={text.goesIn(wizard.draft.position)}>
+      <form className={styles.form} onSubmit={next} noValidate>
+        <Step
+          draft={wizard.draft}
+          view={wizard.view}
+          problems={problems}
+          tried={wizard.tried.includes(shown)}
+          namesInUse={models.map((model) => model.name)}
+          baseFitting={baseFitting}
+          onChange={(draft) => dispatch({ type: 'wizardChanged', draft })}
+          onViewChange={(view) => dispatch({ type: 'wizardChanged', view })}
+          onExtraPicked={(kind) => dispatch({ type: 'wizardExtraPicked', kind })}
+          onExtraRemoved={(id) => dispatch({ type: 'wizardExtraRemoved', id })}
+          onExtraChanged={(id, answers) => dispatch({ type: 'wizardExtraChanged', id, answers })}
+        />
 
-      <div className={styles.columns}>
-        <Progress shown={shown} />
-
-        <form className={styles.form} onSubmit={next} noValidate>
-          <Step
-            draft={wizard.draft}
-            view={wizard.view}
-            problems={problems}
-            tried={wizard.tried.includes(shown)}
-            namesInUse={models.map((model) => model.name)}
-            baseFitting={baseFitting}
-            onChange={(draft) => dispatch({ type: 'wizardChanged', draft })}
-            onViewChange={(view) => dispatch({ type: 'wizardChanged', view })}
-            onExtraPicked={(kind) => dispatch({ type: 'wizardExtraPicked', kind })}
-            onExtraRemoved={(id) => dispatch({ type: 'wizardExtraRemoved', id })}
-            onExtraChanged={(id, answers) => dispatch({ type: 'wizardExtraChanged', id, answers })}
-          />
-
-          <div className={styles.actions} data-sticks-to-window>
-            {/* Back from the first step leaves the wizard, so it asks first, like every other way out. */}
-            <Button icon={<BackIcon />} onClick={() => goTo(before ? paths.addStep(before) : paths.home)}>
-              {text.back}
+        <div className={styles.actions} data-sticks-to-window>
+          {/* Back from the first step leaves the wizard, so it asks first, like every other way out. */}
+          <Button icon={<BackIcon />} onClick={() => goTo(before ? paths.addStep(before) : paths.home)}>
+            {text.back}
+          </Button>
+          {after ? (
+            <Button type="submit" variant="primary">
+              {text.next}
             </Button>
-            {after ? (
-              <Button type="submit" variant="primary">
-                {text.next}
-              </Button>
-            ) : (
-              <Button type="submit" variant="primary" icon={<PlusIcon />}>
-                {text.review.confirm}
-              </Button>
-            )}
-            <a className={styles.cancel} href={paths.home}>
-              {text.cancel}
-            </a>
-          </div>
-        </form>
-      </div>
+          ) : (
+            <Button type="submit" variant="primary" icon={<PlusIcon />}>
+              {text.review.confirm}
+            </Button>
+          )}
+          <a className={styles.cancel} href={paths.home}>
+            {text.cancel}
+          </a>
+        </div>
+      </form>
 
       {leaving && (
         <Dialog title={text.leave.title} onDismiss={onKeepGoing}>
@@ -192,6 +143,6 @@ export function AddModelScreen({
           </DialogActions>
         </Dialog>
       )}
-    </div>
+    </WizardFrame>
   )
 }

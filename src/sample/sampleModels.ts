@@ -53,7 +53,15 @@ function model(
   feedback: readonly FeedbackKind[] = [],
   basics: readonly Feature[] = [steering, throttle],
 ): Model {
-  return { id: sampleId(position), position, name, receiverTypeId, features: [...basics, ...extras], feedback }
+  return {
+    id: sampleId(position),
+    position,
+    name,
+    receiverTypeId,
+    features: [...basics, ...extras],
+    feedback,
+    lightColour: null,
+  }
 }
 
 // The radio's list as the sample starts: 20 models in positions 1 to 20, and positions 21 to 60 empty.

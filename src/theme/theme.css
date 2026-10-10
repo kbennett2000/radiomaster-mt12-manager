@@ -28,6 +28,15 @@
   --color-danger-soft: #f8e8e5;
   --color-on-danger: #ffffff;
 
+  /* Colour: the colours the radio's own lights can show. Only ever used as a dot beside the colour's name. */
+  --led-red: #d8453d;
+  --led-orange: #e98b1f;
+  --led-yellow: #e9c62b;
+  --led-green: #3ba55c;
+  --led-blue: #2f7fd6;
+  --led-purple: #8f5ccb;
+  --led-white: #ffffff;
+
   /* Colour: keyboard focus, and the shade behind a dialog */
   --color-focus: #1f2a2c;
   --color-backdrop: rgb(31 42 44 / 45%);

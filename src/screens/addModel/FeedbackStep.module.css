@@ -1,0 +1,81 @@
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.help {
+  color: var(--color-text-muted);
+}
+
+/* One extra per row, in the order of the extras list. */
+.rows {
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+}
+
+.row {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.row:first-child {
+  border-top: none;
+}
+
+.rowName {
+  margin: 0;
+  font-size: var(--text-large);
+}
+
+/* The three settings side by side, each under its own label. */
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-6);
+}
+
+.setting {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+}
+
+.settingLabel {
+  color: var(--color-text-muted);
+}
+
+.colourPicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+}
+
+.select {
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: var(--border-thick) solid var(--color-border-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+}
+
+/* The words Voice would say, right under the Sound choice and no wider than it. */
+.says {
+  width: 0;
+  min-width: 100%;
+  font-weight: var(--weight-medium);
+}
+
+.says:empty,
+.clash:empty {
+  display: none;
+}
+
+.clash {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-sunken);
+}

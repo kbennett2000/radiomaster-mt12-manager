@@ -19,6 +19,7 @@ const at = (...positions: number[]): Model[] =>
     receiverTypeId: 'spektrum-slt',
     features: [],
     feedback: [],
+    lightColour: null,
   }))
 
 /** A model that is not in the list, last seen in a position. */
