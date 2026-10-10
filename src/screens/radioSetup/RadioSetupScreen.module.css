@@ -1,6 +1,12 @@
 .page {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
 }
 
 .back {

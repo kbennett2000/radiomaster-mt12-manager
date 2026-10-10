@@ -10,6 +10,8 @@ test('Delete names the model and will not delete the current model until another
 
   expect(dialog.getByRole('heading', { name: strings.deleteModel.title('Mini 8ight') })).toBeTruthy()
   expect(dialog.getByRole('button', { name: strings.deleteModel.keep })).toBeTruthy()
+  // It says what will happen to the rest of the list before the person confirms.
+  expect(dialog.getByText(strings.deleteModel.lastInList)).toBeTruthy()
 
   fireEvent.click(dialog.getByRole('button', { name: strings.deleteModel.confirm }))
 

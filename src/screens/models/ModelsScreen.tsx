@@ -3,7 +3,15 @@ import { Button, ButtonLink } from '../../components/Button.tsx'
 import { CloseIcon, PlusIcon, UndoIcon } from '../../components/icons.tsx'
 import { Notice } from '../../components/Notice.tsx'
 import { MT12 } from '../../domain/catalog.ts'
-import { isRadioFull, type Action, type AppState } from '../../state/appState.ts'
+import type { Model } from '../../domain/model.ts'
+import { modelsAfter } from '../../domain/positions.ts'
+import {
+  isRadioFull,
+  type Action,
+  type AppState,
+  type Notice as Change,
+  type Shift,
+} from '../../state/appState.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import { DeleteDialog } from '../delete/DeleteDialog.tsx'
@@ -35,6 +43,39 @@ function AddModelAction({ full, onFull }: { full: boolean; onFull: () => void })
   )
 }
 
+/** The other models a change moved, in one sentence, or null when none did. */
+function shiftWords(shift: Shift): string | null {
+  if (shift.count === 0) return null
+  if (shift.onlyName) return strings.notice.oneMoved(shift.onlyName, shift.direction)
+  return strings.notice.othersMoved(shift.count, shift.first, shift.last, shift.direction)
+}
+
+/** What the last change did, in plain words. */
+function noticeWords(notice: Exclude<Change, { kind: 'radioSetupSaved' }>): string {
+  const say = strings.notice
+  switch (notice.kind) {
+    case 'copied':
+      return say.copied(notice.modelName, notice.position)
+    case 'moved':
+      return say.moved(notice.modelName, notice.position)
+    case 'emptyMoved':
+      return say.emptyMoved(notice.fromPosition, notice.position)
+    case 'closedUp':
+      return say.closedUp(notice.modelCount)
+    case 'undone':
+      return say.undone
+    case 'restored':
+      return [say.restored(notice.modelName, notice.position), shiftWords(notice.shift)].filter(Boolean).join(' ')
+    case 'deleted': {
+      let rest: string | null
+      if (notice.shift === null) rest = say.leftEmpty(notice.position)
+      else if (notice.shift.count > 1) rest = say.othersAfterMovedUp(notice.shift.count)
+      else rest = shiftWords(notice.shift)
+      return [say.deleted(notice.modelName), rest, say.copyKept].filter(Boolean).join(' ')
+    }
+  }
+}
+
 function ChangeNotice({ state, dispatch }: ModelsScreenProps) {
   const notice = state.notice
   if (!notice) return null
@@ -53,20 +94,13 @@ function ChangeNotice({ state, dispatch }: ModelsScreenProps) {
     )
   }
 
-  let words: string
-  if (notice.kind === 'restored' && notice.position !== notice.wantedPosition) {
-    words = strings.notice.restoredElsewhere(notice.modelName, notice.wantedPosition, notice.position)
-  } else {
-    words = strings.notice[notice.kind](notice.modelName, notice.position)
-  }
-
   return (
     <Notice
       title={strings.notice.savedTitle}
       announceKey={notice}
       actions={
         <>
-          {(notice.kind === 'deleted' || notice.kind === 'moved') && (
+          {'before' in notice && (
             <Button icon={<UndoIcon />} onClick={() => dispatch({ type: 'changeUndone' })}>
               {strings.notice.undo}
             </Button>
@@ -75,9 +109,19 @@ function ChangeNotice({ state, dispatch }: ModelsScreenProps) {
         </>
       }
     >
-      {words}
+      {noticeWords(notice)}
     </Notice>
   )
+}
+
+/** What deleting a model will do to the rest of the list, said before the person confirms. */
+function whatElseHappens(state: AppState, model: Model): string {
+  const say = strings.deleteModel
+  if (state.whenDeleting === 'leaveEmpty') return say.willLeaveEmpty(model.position)
+  const after = modelsAfter(state.models, model.position)
+  if (after.length === 0) return say.lastInList
+  if (after.length === 1) return say.oneWillMoveUp(after[0].name)
+  return say.othersWillMoveUp(after.length)
 }
 
 function OpenDialog({ state, dispatch }: ModelsScreenProps) {
@@ -85,6 +129,18 @@ function OpenDialog({ state, dispatch }: ModelsScreenProps) {
   const close = () => dispatch({ type: 'dialogClosed' })
   if (!dialog) return null
   if (dialog.type === 'radioFull') return <RadioFullDialog onClose={close} />
+
+  if (dialog.type === 'move') {
+    return (
+      <MoveDialog
+        fromPosition={dialog.fromPosition}
+        models={state.models}
+        toPosition={dialog.toPosition}
+        onConfirm={(toPosition) => dispatch({ type: 'placeMoved', fromPosition: dialog.fromPosition, toPosition })}
+        onCancel={close}
+      />
+    )
+  }
 
   const model = state.models.find((candidate) => candidate.id === dialog.modelId)
   if (!model) return null
@@ -101,22 +157,11 @@ function OpenDialog({ state, dispatch }: ModelsScreenProps) {
     )
   }
 
-  if (dialog.type === 'move') {
-    return (
-      <MoveDialog
-        model={model}
-        models={state.models}
-        toPosition={dialog.toPosition}
-        onConfirm={(toPosition) => dispatch({ type: 'modelMoved', modelId: model.id, toPosition })}
-        onCancel={close}
-      />
-    )
-  }
-
   const isCurrent = state.currentModelId === model.id
   return (
     <DeleteDialog
       model={model}
+      whatElseHappens={whatElseHappens(state, model)}
       switchChoices={isCurrent ? state.models.filter((other) => other.id !== model.id) : []}
       switchToId={dialog.switchToId}
       triedWithoutPicking={dialog.triedWithoutPicking === true}
@@ -159,9 +204,10 @@ export function ModelsScreen({ state, dispatch }: ModelsScreenProps) {
             models={state.models}
             currentModelId={state.currentModelId}
             onCopy={(modelId) => dispatch({ type: 'copyRequested', modelId })}
-            onMoveRequested={(modelId) => dispatch({ type: 'moveRequested', modelId })}
-            onMoved={(modelId, toPosition) => dispatch({ type: 'modelMoved', modelId, toPosition })}
+            onMoveRequested={(position) => dispatch({ type: 'moveRequested', position })}
+            onMoved={(fromPosition, toPosition) => dispatch({ type: 'placeMoved', fromPosition, toPosition })}
             onDelete={(modelId) => dispatch({ type: 'deleteRequested', modelId })}
+            onCloseUp={() => dispatch({ type: 'emptyPlacesClosedUp' })}
           />
         </>
       )}

@@ -1,0 +1,132 @@
+.fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  padding: 0;
+}
+
+/* A question that is one of several under a heading. */
+.fieldQuestion {
+  font-weight: var(--weight-bold);
+}
+
+.help {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+/* Choices with pictures: one card each, side by side. */
+.pictures {
+  display: grid;
+  grid-template-columns: repeat(var(--choices), minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: var(--border-thick) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.card:hover {
+  border-color: var(--color-border-strong);
+}
+
+.card:has(.radio:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.card:has(.radio:focus-visible) {
+  outline: var(--focus-ring) solid var(--color-focus);
+  outline-offset: var(--focus-ring);
+}
+
+.radio:focus-visible {
+  outline: none;
+}
+
+.picture {
+  display: block;
+  width: 100%;
+  max-width: var(--picture-width);
+  margin: 0 auto var(--space-2);
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.radio {
+  flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.label {
+  font-size: var(--text-large);
+  font-weight: var(--weight-bold);
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+/* Choices in words only: smaller cards, stacked or side by side. */
+.wordsStack,
+.wordsRow {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.wordsStack {
+  max-width: var(--reading-width);
+}
+
+.wordsRow {
+  grid-auto-columns: minmax(0, max-content);
+  grid-auto-flow: column;
+  justify-content: start;
+}
+
+.wordCard {
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-medium);
+}
+
+.wordLabel {
+  font-weight: var(--weight-medium);
+}
+
+/* Lines up under the label, clear of the radio button. */
+.wordDescription {
+  padding-left: calc(var(--icon-size) + var(--space-3));
+  color: var(--color-text-muted);
+}
+
+.problem {
+  margin-top: var(--space-3);
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.problem:empty {
+  display: none;
+}

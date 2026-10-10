@@ -17,8 +17,11 @@ export const MT12 = {
     { id: 'SD', type: 'switch' },
     { id: 'P1', type: 'dial' },
     { id: 'P2', type: 'dial' },
-    { id: 'throttleTrim', type: 'trimButtons' },
-    { id: 'steeringTrim', type: 'trimButtons' },
+    { id: 'T1', type: 'buttons' },
+    { id: 'T2', type: 'buttons' },
+    { id: 'T3', type: 'buttons' },
+    { id: 'T4', type: 'buttons' },
+    { id: 'T5', type: 'buttons' },
   ],
   baseFittings: ['blankCover', 'twoSwitches', 'joystick'],
   modules: [

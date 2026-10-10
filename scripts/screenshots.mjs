@@ -2,16 +2,18 @@
 //
 //   npm run screenshots
 //
-// It serves the built site, reads the list of states from the reviewer panel, and saves two sets:
+// It serves the built site, reads the list of states from the reviewer panel, and saves the states
+// that are new or changed in this cycle, at two window sizes:
 //
-//   docs/screenshots/cycle-02/        every state at 1440x900
-//   docs/screenshots/cycle-02-1024/   the states that show the list of models, at 1024x768
+//   docs/screenshots/cycle-03/        at 1440x900
+//   docs/screenshots/cycle-03-1024/   at 1024x768
 //
-// A page taller than the window also gets a "-full" picture of the whole page. Pictures from
-// earlier cycles are left alone.
+// A page taller than the window also gets a "-full" picture of the whole page. It only ever
+// writes into those two folders. Pictures from earlier cycles are left alone.
 //
 // The script fails if a banned word shows up, a page overflows sideways, the page reports an
-// error, or the list of 20 models grows taller than its target.
+// error, the list of 20 models grows taller than its target, or a row of that list runs past
+// two lines at 1440px.
 
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -21,13 +23,29 @@ import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+// The groups of states that are new or changed in this cycle. Connect and Finish are not.
+const GROUPS = ['models', 'delete']
+
 const SETS = [
-  { dir: 'docs/screenshots/cycle-02', width: 1440, height: 900, groups: null, panel: true },
-  { dir: 'docs/screenshots/cycle-02-1024', width: 1024, height: 768, groups: ['models', 'delete'], panel: false },
+  { dir: 'docs/screenshots/cycle-03', width: 1440, height: 900 },
+  { dir: 'docs/screenshots/cycle-03-1024', width: 1024, height: 768 },
 ]
 
-// The 20 sample models must fit in about one and a half windows at 1440x900.
-const DENSITY = { state: 'models-20', width: 1440, maxWindows: 1.5 }
+// The 20 sample models must fit in about one and a half windows at 1440x900,
+// and no row of that list may run past two lines there.
+const DENSITY = { state: 'models-20', width: 1440, maxWindows: 1.5, maxLines: 2 }
+
+/** Runs in the page: how many lines each row of the list takes, as [position and name, lines] pairs. */
+function readRowLines() {
+  const rows = [...document.querySelectorAll('main ol > li')]
+  return rows.map((row) => {
+    const line = parseFloat(getComputedStyle(row).lineHeight)
+    const style = getComputedStyle(row)
+    const inner = row.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+    const label = `${row.querySelector('[class*="number"]')?.textContent ?? ''} ${row.querySelector('h2')?.textContent ?? ''}`
+    return [label.trim(), Math.round(inner / line)]
+  })
+}
 
 // Words the app must never show. See src/strings/en.ts.
 const BANNED = [
@@ -111,7 +129,7 @@ async function saveSet(browser, baseUrl, set) {
   let saved = 0
 
   for (const scenario of numbered) {
-    if (set.groups && !set.groups.includes(scenario.group)) continue
+    if (!GROUPS.includes(scenario.group)) continue
     await page.goto(new URL(scenario.href, baseUrl).href)
     await settle(page)
     await check(page, scenario.name, set.width)
@@ -137,9 +155,19 @@ async function saveSet(browser, baseUrl, set) {
         )
       }
     }
+
+    if (scenario.id === DENSITY.state) {
+      const long = (await page.evaluate(readRowLines)).filter(([, lines]) => lines > DENSITY.maxLines)
+      const said = long.map(([label, lines]) => `${label} (${lines} lines)`).join(', ')
+      if (long.length > 0 && set.width === DENSITY.width) {
+        problems.push(`${scenario.name}: rows over ${DENSITY.maxLines} lines at ${set.width}px: ${said}`)
+      } else if (long.length > 0) {
+        notes.push(`At ${set.width}px these rows run past ${DENSITY.maxLines} lines: ${said}.`)
+      }
+    }
   }
 
-  if (set.panel) {
+  {
     // The reviewer panel itself, opened.
     const name = `${String(numbered.length + 1).padStart(2, '0')}-reviewer-panel-open`
     await page.goto(new URL(numbered[0].href, baseUrl).href)

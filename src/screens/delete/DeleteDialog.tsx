@@ -7,6 +7,8 @@ import styles from './DeleteDialog.module.css'
 
 interface DeleteDialogProps {
   model: Model
+  /** What deleting will do to the rest of the list, in one plain sentence. */
+  whatElseHappens: string
   /** The models the radio could switch to. Empty unless the radio is set to the model being deleted. */
   switchChoices: readonly Model[]
   /** A model already picked to switch to. Only the review scenarios use this. */
@@ -25,6 +27,7 @@ const text = strings.deleteModel
  */
 export function DeleteDialog({
   model,
+  whatElseHappens,
   switchChoices,
   switchToId = '',
   triedWithoutPicking,
@@ -52,6 +55,7 @@ export function DeleteDialog({
     <Dialog title={text.title(model.name)} onDismiss={onKeep}>
       <form onSubmit={submit} noValidate>
         <p>{text.body}</p>
+        <p className={styles.whatElse}>{whatElseHappens}</p>
         {mustPick && (
           <div className={styles.switch}>
             <p>{text.currentIntro}</p>
