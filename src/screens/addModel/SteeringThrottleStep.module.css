@@ -98,3 +98,15 @@
 .portSelect[aria-invalid='true'] {
   border-color: var(--color-danger);
 }
+
+/* A line about the answer that is picked, under its control. */
+.note {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+/* When the line says something will be replaced, it is said more firmly. */
+.note[data-warns] {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}

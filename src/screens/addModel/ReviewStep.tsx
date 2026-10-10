@@ -1,56 +1,12 @@
-import type { ReactNode } from 'react'
-import { colourStatesOf, switches, type ExtraAnswers } from '../../domain/extras.ts'
-import { coloursIn, givesFeedback } from '../../domain/feedback.ts'
 import { paths } from '../../state/useHashRoute.ts'
-import { modelFrom, throttleFeelOf, type BuiltStepId } from '../../state/wizard.ts'
-import { listOf, strings } from '../../strings/en.ts'
-import { extraName, whatEachControlDoes, whatPlugsIn } from './describe.ts'
+import { modelFrom } from '../../state/wizard.ts'
+import { strings } from '../../strings/en.ts'
+import { ControlsSection, ModelSummary, PortsSection } from './ModelSummary.tsx'
 import styles from './ReviewStep.module.css'
 import type { StepProps } from './stepProps.ts'
 import stepStyles from './steps.module.css'
 
 const text = strings.addModel.review
-
-interface RowProps {
-  label: string
-  /** The step where this answer can be changed. Left out for the position, which no step sets. */
-  changeOn?: BuiltStepId
-  /** Something to get ready on that step before it shows, such as which extra is open. */
-  onChange?: () => void
-  children: ReactNode
-}
-
-function Row({ label, changeOn, onChange, children }: RowProps) {
-  return (
-    <div className={styles.row}>
-      <dt className={styles.label}>{label}</dt>
-      <dd className={styles.answer}>{children}</dd>
-      <dd className={styles.change}>
-        {changeOn && (
-          <a href={paths.addStep(changeOn)} aria-label={text.changeNamed(label)} onClick={onChange}>
-            {text.change}
-          </a>
-        )}
-      </dd>
-    </div>
-  )
-}
-
-/**
- * One extra's feedback in a few words, such as "Lights: beep, vibration and blue light". An extra
- * with a colour for each state names each one: "blue light in low gear and green light in high gear".
- */
-function feedbackWords(extra: ExtraAnswers): string {
-  const { sound, vibration } = extra.feedback
-  const parts = [
-    sound === 'off' ? null : text.feedbackSound[sound],
-    vibration ? text.feedbackVibration : null,
-    ...coloursIn(extra.feedback, colourStatesOf(extra)).map(({ state, colour }) =>
-      text.feedbackColour(strings.addModel.feedback.colours[colour], state),
-    ),
-  ].filter((part) => part !== null)
-  return text.extraFeedback(extraName(extra), listOf(parts))
-}
 
 /**
  * Step 6: everything that was answered, with a way back to each step. Below the summary it turns
@@ -60,83 +16,20 @@ function feedbackWords(extra: ExtraAnswers): string {
 export function ReviewStep({ draft, baseFitting, onViewChange }: StepProps) {
   // The same model "Add to my radio" will add, built here only to describe it.
   const features = modelFrom(draft, 'review', draft.position)?.features ?? []
-  const withFeedback = draft.extras.filter((extra) => switches(extra) && givesFeedback(extra.feedback))
 
   return (
     <div className={stepStyles.step}>
       <h2>{text.title}</h2>
-      <dl className={styles.summary}>
-        <Row label={text.rows.name} changeOn="name">
-          {draft.name.trim()}
-        </Row>
-        <Row label={text.rows.position}>{draft.position}</Row>
-        <Row label={text.rows.receiver} changeOn="receiver">
-          {draft.receiverTypeId ? strings.receiverTypes[draft.receiverTypeId] : null}
-        </Row>
-        <Row label={text.rows.steering} changeOn="steeringThrottle">
-          <span>{text.direction[draft.steeringDirection]}</span>
-          <span>{text.travel(draft.steeringTravel, draft.vehicleKind)}</span>
-        </Row>
-        <Row label={text.rows.throttle} changeOn="steeringThrottle">
-          <span>{text.direction[draft.throttleDirection]}</span>
-          <span>{text.feel[throttleFeelOf(draft)]}</span>
-          <span>{text.topSpeed(draft.topSpeed)}</span>
-        </Row>
-        {draft.extras.length === 0 && (
-          <Row label={text.extrasLabel} changeOn="extras" onChange={() => onViewChange({ openExtraId: null })}>
-            {text.extrasNone}
-          </Row>
-        )}
-        {/* "Change" beside an extra opens step 4 with that extra's questions showing, not folded. */}
-        {draft.extras.map((extra) => (
-          <Row
-            key={extra.id}
-            label={extraName(extra)}
-            changeOn="extras"
-            onChange={() => onViewChange({ openExtraId: extra.id })}
-          >
-            {extra.control && <span>{strings.controls[extra.control]}</span>}
-            {extra.speedControl && <span>{strings.controls[extra.speedControl]}</span>}
-            {extra.port !== null && <span>{text.port(extra.port)}</span>}
-          </Row>
-        ))}
-        <Row label={text.feedbackLabel} changeOn="feedback">
-          {draft.lightColour === null && withFeedback.length === 0 && text.feedbackNone}
-          {draft.lightColour !== null && (
-            <span>{text.modelColour(strings.addModel.feedback.colours[draft.lightColour])}</span>
-          )}
-          {withFeedback.map((extra) => (
-            <span key={extra.id}>{feedbackWords(extra)}</span>
-          ))}
-        </Row>
-      </dl>
-
-      <section className={styles.section}>
-        <h3>{text.controlsTitle}</h3>
-        <p className={styles.help}>{text.controlsHelp}</p>
-        <dl className={styles.lines}>
-          {whatEachControlDoes(features, baseFitting).map(({ control, does }) => (
-            <div key={control} className={styles.line}>
-              <dt className={styles.lineLabel}>{strings.controls[control]}</dt>
-              <dd className={does ? styles.lineWords : styles.unused}>{does ?? text.notUsed}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className={styles.section}>
-        <h3>{text.portsTitle}</h3>
-        <p className={styles.help}>{text.portsHelp}</p>
-        <dl className={styles.lines}>
-          {whatPlugsIn(features).map(({ port, what }) => (
-            <div key={port} className={styles.line}>
-              <dt className={styles.lineLabel}>{text.port(port)}</dt>
-              <dd className={what ? styles.lineWords : styles.unused}>{what ?? text.nothing}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
+      <ModelSummary
+        draft={draft}
+        changeLink={(part, extraId) => ({
+          href: paths.addStep(part),
+          // "Change" beside an extra opens step 4 with that extra open. From "Extras: None" none is.
+          onClick: part === 'extras' ? () => onViewChange({ openExtraId: extraId ?? null }) : undefined,
+        })}
+      />
+      <ControlsSection features={features} baseFitting={baseFitting} heading="h3" />
+      <PortsSection features={features} heading="h3" />
       <p className={styles.afterThis}>{text.afterThis}</p>
     </div>
   )

@@ -1,0 +1,31 @@
+/*
+ * The Edit pages are laid out like the wizard's steps, without the list of steps down the left.
+ * They keep to the width a step has in the wizard, so the same parts look the same in both.
+ */
+.page {
+  display: grid;
+  gap: var(--space-5);
+  max-width: calc(var(--content-width) - var(--wizard-steps-width) - var(--space-7));
+}
+
+.notice:empty {
+  display: none;
+}
+
+/* Settings made on the radio: what it is, the control it uses, and one sentence about it. */
+.fact {
+  margin-right: var(--space-4);
+  font-weight: var(--weight-medium);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.intro {
+  max-width: var(--reading-width);
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}

@@ -21,14 +21,24 @@ import {
 import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { BaseFitting } from '../domain/radio.ts'
 import {
+  openPart,
+  partHasChanges,
+  partIsFine,
+  problemsInEdit,
+  withPartSaved,
+  type EditPart,
+  type EditState,
+} from './edit.ts'
+import {
+  answered,
   everyStepIsFine,
+  extraChanged,
+  extraPicked,
+  extraRemoved,
   modelFrom,
   newWizard,
   problemsIn,
-  withAnswers,
-  withExtraChanged,
-  withExtraPicked,
-  withExtraRemoved,
+  unfinishedExtraOpened,
   type BuiltStepId,
   type ModelDraft,
   type WizardState,
@@ -65,8 +75,18 @@ export type Notice =
   | { kind: 'emptyMoved'; fromPosition: number; position: number; before: Before }
   | { kind: 'closedUp'; modelCount: number; before: Before }
   | { kind: 'restored'; modelName: string; position: number; shift: Shift }
+  /** One part of a model was changed on its Edit page. `was` and `now` are the model before and after. */
+  | { kind: 'edited'; modelId: ModelId; part: EditPart; was: Model; now: Model; before: Before }
+  /** A change made on a model's Edit page was undone. */
+  | { kind: 'editUndone'; modelId: ModelId; modelName: string }
   | { kind: 'undone' }
   | { kind: 'radioSetupSaved' }
+
+/** A notice about a change made on a model's Edit page. It is shown there, and in the list. */
+export type EditChange = Extract<Notice, { kind: 'edited' | 'editUndone' }>
+
+export const isEditChange = (notice: Notice | null): notice is EditChange =>
+  notice?.kind === 'edited' || notice?.kind === 'editUndone'
 
 export type OpenDialog =
   | { type: 'copy'; modelId: ModelId; draftName?: string }
@@ -97,6 +117,8 @@ export interface AppState {
   dialog: OpenDialog | null
   /** The "Add a model" wizard while it is open, with the answers so far. */
   wizard: WizardState | null
+  /** The page for one part of a model while it is open, with the answers as they stand. */
+  edit: EditState | null
   /** A model that was just added. The list scrolls to its row and marks it for a moment. */
   newModelId: ModelId | null
   /**
@@ -136,6 +158,18 @@ export type Action =
   | { type: 'wizardStepTried'; step: BuiltStepId }
   | { type: 'wizardLeft' }
   | { type: 'wizardFinished' }
+  /** Opens the page for one part of a model. `openExtraId` is the extra whose questions should show. */
+  | { type: 'editOpened'; modelId: ModelId; part: EditPart; openExtraId?: string }
+  | { type: 'editChanged'; draft?: Partial<ModelDraft>; view?: Partial<WizardView> }
+  | { type: 'editExtraPicked'; kind: ExtraKind }
+  | { type: 'editExtraRemoved'; id: string }
+  | { type: 'editExtraChanged'; id: string; answers: Partial<ExtraAnswers> }
+  /** The person tried to save, so anything missing on the page should now be pointed out. */
+  | { type: 'editTried' }
+  /** "Save changes": saves the part that is open and closes its page. */
+  | { type: 'editSaved' }
+  /** The page was left without saving. */
+  | { type: 'editLeft' }
   /** The list has shown the mark on a newly added row for long enough. */
   | { type: 'newModelMarked' }
   | { type: 'dialogClosed' }
@@ -155,6 +189,7 @@ export function initialState(browserSupported: boolean): AppState {
     notice: null,
     dialog: null,
     wizard: null,
+    edit: null,
     newModelId: null,
     lastAddedModelId: null,
     nextCopyNumber: 1,
@@ -214,6 +249,7 @@ export function reducer(state: AppState, action: Action): AppState {
         notice: null,
         dialog: null,
         wizard: null,
+        edit: null,
         newModelId: null,
         lastAddedModelId: null,
       }
@@ -316,6 +352,9 @@ export function reducer(state: AppState, action: Action): AppState {
         const position = undone.before.models.find((model) => model.id === undone.modelId)?.position ?? undone.position
         return { ...back, notice: { kind: 'restored', modelName: undone.modelName, position, shift: nothingMoved } }
       }
+      if (undone.kind === 'edited') {
+        return { ...back, notice: { kind: 'editUndone', modelId: undone.modelId, modelName: undone.was.name } }
+      }
       return { ...back, notice: { kind: 'undone' } }
     }
 
@@ -343,60 +382,31 @@ export function reducer(state: AppState, action: Action): AppState {
       const position =
         requested !== undefined && !modelAt(state.models, requested) ? requested : firstEmptyPosition(state.models)
       if (position === null) return { ...state, dialog: { type: 'radioFull' } }
-      return { ...state, wizard: newWizard(position), lastAddedModelId: null, notice: null, dialog: null }
+      return { ...state, wizard: newWizard(position), edit: null, lastAddedModelId: null, notice: null, dialog: null }
     }
 
     case 'wizardStepShown':
       return state.wizard ? { ...state, wizard: { ...state.wizard, step: action.step } } : state
 
-    case 'wizardChanged': {
-      if (!state.wizard) return state
-      const draft = withAnswers(state.wizard.draft, action.draft ?? {})
-      const view = { ...state.wizard.view, ...action.view }
-      // An extra that has just been dropped cannot stay open.
-      const openExtraId = draft.extras.some((extra) => extra.id === view.openExtraId) ? view.openExtraId : null
-      return { ...state, wizard: { ...state.wizard, draft, view: { ...view, openExtraId } } }
-    }
+    case 'wizardChanged':
+      return state.wizard ? { ...state, wizard: answered(state.wizard, action.draft, action.view) } : state
 
-    case 'wizardExtraPicked': {
-      const wizard = state.wizard
-      if (!wizard) return state
-      const { draft, id } = withExtraPicked(wizard.draft, action.kind)
-      return { ...state, wizard: { ...wizard, draft, view: { ...wizard.view, openExtraId: id } } }
-    }
+    case 'wizardExtraPicked':
+      return state.wizard ? { ...state, wizard: extraPicked(state.wizard, action.kind) } : state
 
-    case 'wizardExtraRemoved': {
-      const wizard = state.wizard
-      if (!wizard) return state
-      const openExtraId = wizard.view.openExtraId === action.id ? null : wizard.view.openExtraId
-      return {
-        ...state,
-        wizard: {
-          ...wizard,
-          draft: withExtraRemoved(wizard.draft, action.id),
-          view: { ...wizard.view, openExtraId },
-        },
-      }
-    }
+    case 'wizardExtraRemoved':
+      return state.wizard ? { ...state, wizard: extraRemoved(state.wizard, action.id) } : state
 
     case 'wizardExtraChanged':
-      if (!state.wizard) return state
-      return {
-        ...state,
-        wizard: { ...state.wizard, draft: withExtraChanged(state.wizard.draft, action.id, action.answers) },
-      }
+      return state.wizard ? { ...state, wizard: extraChanged(state.wizard, action.id, action.answers) } : state
 
     case 'wizardStepTried': {
       const wizard = state.wizard
       if (!wizard) return state
       const tried = wizard.tried.includes(action.step) ? wizard.tried : [...wizard.tried, action.step]
       // On the extras step, open the first extra that still needs an answer, so the message about it shows.
-      const unfinished = Object.keys(problemsIn(wizard.draft, state.models).extras)
-      const openExtraId =
-        action.step === 'extras' && unfinished.length > 0 && !unfinished.includes(wizard.view.openExtraId ?? '')
-          ? unfinished[0]
-          : wizard.view.openExtraId
-      return { ...state, wizard: { ...wizard, tried, view: { ...wizard.view, openExtraId } } }
+      const marked = { ...wizard, tried }
+      return { ...state, wizard: action.step === 'extras' ? unfinishedExtraOpened(marked) : marked }
     }
 
     case 'wizardLeft':
@@ -424,6 +434,50 @@ export function reducer(state: AppState, action: Action): AppState {
         lastAddedModelId: model.id,
       }
     }
+
+    case 'editOpened': {
+      const model = state.models.find((candidate) => candidate.id === action.modelId)
+      if (!model) return state
+      return { ...state, edit: openPart(model, action.part, action.openExtraId), notice: null, dialog: null }
+    }
+
+    case 'editChanged':
+      return state.edit ? { ...state, edit: answered(state.edit, action.draft, action.view) } : state
+
+    case 'editExtraPicked':
+      return state.edit ? { ...state, edit: extraPicked(state.edit, action.kind) } : state
+
+    case 'editExtraRemoved':
+      return state.edit ? { ...state, edit: extraRemoved(state.edit, action.id) } : state
+
+    case 'editExtraChanged':
+      return state.edit ? { ...state, edit: extraChanged(state.edit, action.id, action.answers) } : state
+
+    case 'editTried': {
+      if (!state.edit) return state
+      const marked = { ...state.edit, tried: true }
+      return { ...state, edit: state.edit.part === 'extras' ? unfinishedExtraOpened(marked) : marked }
+    }
+
+    case 'editSaved': {
+      const edit = state.edit
+      const model = edit && state.models.find((candidate) => candidate.id === edit.modelId)
+      if (!edit || !model) return { ...state, edit: null }
+      // Nothing is saved while an answer is missing or wrong. The page stays open so it can be fixed.
+      if (!partIsFine(edit.part, problemsInEdit(model, edit.draft, state.models))) return state
+      // Saving with nothing changed just closes the page.
+      if (!partHasChanges(model, edit.part, edit.draft)) return { ...state, edit: null }
+      const saved = withPartSaved(model, edit.part, edit.draft)
+      return {
+        ...state,
+        models: state.models.map((other) => (other.id === model.id ? saved : other)),
+        notice: { kind: 'edited', modelId: model.id, part: edit.part, was: model, now: saved, before: before(state) },
+        edit: null,
+      }
+    }
+
+    case 'editLeft':
+      return { ...state, edit: null }
 
     case 'newModelMarked':
       return { ...state, newModelId: null }

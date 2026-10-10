@@ -32,7 +32,37 @@
   overflow-wrap: anywhere;
 }
 
-.change {
+.change,
+.note {
+  margin: 0;
+}
+
+/* Said where "Change" would be, for an answer that is changed somewhere else. */
+.note {
+  color: var(--color-text-muted);
+}
+
+/* Under an answer, on a line of its own. */
+.stacked,
+.underAnswer {
+  flex-basis: 100%;
+}
+
+.underAnswer {
+  font-weight: var(--weight-normal);
+}
+
+/* A link about the rows above it, on a row of its own and in line with their answers. */
+.linkRow {
+  display: grid;
+  grid-template-columns: var(--review-label-width) minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.linkCell {
+  grid-column: 2;
   margin: 0;
 }
 
@@ -40,6 +70,11 @@
 .section {
   display: grid;
   gap: var(--space-2);
+}
+
+/* The same size on every page, whatever level the heading is there. */
+.sectionTitle {
+  font-size: var(--text-heading-3);
 }
 
 .help {

@@ -7,6 +7,7 @@
 import { APP_NAME } from '../config/app.ts'
 import type { BrandId, LightColour, ReceiverTypeId } from '../domain/catalog.ts'
 import type { ExtraKind, ExtraProblem } from '../domain/extras.ts'
+import type { LeftAlone } from '../domain/leftAlone.ts'
 import type {
   CustomWorks,
   Direction,
@@ -14,9 +15,11 @@ import type {
   FeedbackKind,
   FeedbackSound,
   SwitchPosition,
+  ThrottleFeel,
 } from '../domain/model.ts'
 import type { WhenDeleting } from '../domain/positions.ts'
 import type { BaseFitting, ControlId, ControlKind } from '../domain/radio.ts'
+import type { EditPart } from '../state/edit.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
 import type { OfferedThrottleFeel, VehicleKind, WizardStepId } from '../state/wizard.ts'
 
@@ -29,16 +32,23 @@ export const listOf = (items: readonly string[]): string => list.format(items)
 
 const comingNextBody = 'This part of the app isn’t built yet.'
 
-// Wording for step 3 of the wizard that depends on the kind of vehicle.
-const hasWheels = (kind: VehicleKind | null): boolean => kind !== 'boat' && kind !== 'other'
+// Wording for step 3 of the wizard that depends on the kind of vehicle. The kind is not known
+// for a model that is being edited, so then the words do not mention wheels.
+const hasWheels = (kind: VehicleKind | null): boolean => kind === 'carOrTruck' || kind === 'crawler'
 const turnsWrongWay = (kind: VehicleKind | null): string => {
   if (kind === 'boat') return 'the boat turns the wrong way'
-  return kind === 'other' ? 'it turns the wrong way' : 'the wheels turn the wrong way'
+  return hasWheels(kind) ? 'the wheels turn the wrong way' : 'it turns the wrong way'
 }
 const goesBackwards = (kind: VehicleKind | null): string => {
   if (kind === 'boat') return 'the boat goes backwards'
   return kind === 'other' ? 'it goes backwards' : 'the vehicle goes backwards'
 }
+
+/** The same words with a capital first letter, to start a line with. */
+const capitalised = (words: string): string => words.charAt(0).toUpperCase() + words.slice(1)
+
+/** "x was", or "x and y were". */
+const wasOrWere = (names: readonly string[]): string => `${listOf(names)} ${names.length === 1 ? 'was' : 'were'}`
 
 /** Where a switch is, as the end of a sentence: "when the switch is up". */
 const switchIs: Record<SwitchPosition, string> = { up: 'up', middle: 'in the middle', down: 'down' }
@@ -632,7 +642,7 @@ export const strings = {
       direction: { normal: 'Normal direction', reversed: 'Reversed direction' } satisfies Record<Direction, string>,
       travel: (value: number, kind: VehicleKind | null) =>
         hasWheels(kind) ? `Wheels turn ${value}%` : `Steering turns ${value}%`,
-      feel: { standard: 'Standard feel', gentle: 'Gentle feel' } satisfies Record<OfferedThrottleFeel, string>,
+      feel: { standard: 'Standard feel', gentle: 'Gentle feel', custom: 'Custom feel' } satisfies Record<ThrottleFeel, string>,
       topSpeed: (value: number) => `Top speed limit ${value}%`,
       extrasNone: 'None',
       extrasLabel: 'Extras',
@@ -754,17 +764,102 @@ export const strings = {
     restoreNamed: (name: string) => `Restore ${name}`,
   },
 
+  // The page for a model that is already on the radio, and the pages that change one part of it.
+  // Each of those pages reuses a step of the "Add a model" wizard, so the questions read the same.
+  editModel: {
+    title: (name: string) => `Edit ${name}`,
+    // The quiet line beside the title.
+    position: (position: number) => `Position ${position}.`,
+    current: 'Your radio is set to this model.',
+    // Said on the Position row, which this page does not change.
+    positionNote: 'Change this with Move in your list.',
+    addOrRemoveExtras: 'Add or remove extras',
+    backToModels: 'Back to your models',
+    save: 'Save changes',
+    cancel: 'Cancel',
+    leave: {
+      title: 'Leave without saving your changes?',
+      body: (name: string) => `${name} will stay the way it is on your radio.`,
+      keepEditing: 'Keep editing',
+      leave: 'Leave',
+    },
+
+    // Said under the receiver list once a different receiver is picked.
+    bindAgainWarning: 'After you change the receiver, you will need to bind it again.',
+
+    // A throttle feel that was made on the radio is offered as a third choice, already picked.
+    customFeel: 'Custom',
+    customFeelHelp: 'Made on the radio. The app leaves it alone.',
+    customFeelReplaced: 'This will replace the custom feel made on the radio.',
+
+    // Settings that can only be made on the radio. The app shows them and never changes them.
+    leftAlone: {
+      title: 'Set up on the radio',
+      help: 'These were set up on the radio itself. The app keeps them exactly as they are.',
+      name: (setting: LeftAlone): string => {
+        if (setting.kind === 'throttlePresets') return 'Throttle presets'
+        if (setting.kind === 'oneButtonPreset') return `One-button preset: ${setting.name}`
+        return setting.kind === 'customThrottleFeel' ? 'Custom throttle feel' : 'Feedback for the whole model'
+      },
+      about: {
+        throttlePresets: 'A switch that jumps the throttle to set positions.',
+        oneButtonPreset: 'One control that sets several things at once.',
+        customThrottleFeel: 'A throttle feel made on the radio.',
+        modelFeedback: 'Sounds, vibration or light colours set up on the radio.',
+      } satisfies Record<LeftAlone['kind'], string>,
+      // Which kinds of feedback, to start a line: "Voice callouts, vibration and LED colour changes".
+      feedbackKinds: (kinds: readonly string[]) => capitalised(listOf(kinds)),
+      // Under the list of extras.
+      alsoOnModel: (names: readonly string[]) =>
+        `Also on this model, set up on the radio: ${listOf(names)}. The app leaves ${names.length === 1 ? 'it' : 'these'} alone.`,
+      // On the Radio feedback page.
+      feedbackAlso: 'This model also has feedback set up on the radio. The app leaves it alone.',
+      // On the Edit page's Radio feedback row, for feedback the app did not set.
+      feedbackRow: 'Set up on the radio, listed below',
+    },
+
+    // What "Saved to your radio" says after a part is saved.
+    saved: {
+      renamed: (was: string, now: string) => `“${was}” is now called “${now}”.`,
+      receiver: (name: string, receiver: string) => `The receiver for ${name} is now ${receiver}.`,
+      bindAgain: 'Bind your receiver again.',
+      showMeHow: 'Show me how',
+      steeringThrottle: (name: string) => `The steering and throttle settings for ${name} were changed.`,
+      // "On TRX-4, Winch was added and Horn sound was removed."
+      extras: (name: string, added: readonly string[], removed: readonly string[], changed: readonly string[]) => {
+        const parts = [
+          added.length > 0 ? `${wasOrWere(added)} added` : null,
+          removed.length > 0 ? `${wasOrWere(removed)} removed` : null,
+          changed.length > 0 ? `${wasOrWere(changed)} changed` : null,
+        ].filter((part) => part !== null)
+        return `On ${name}, ${listOf(parts)}.`
+      },
+      feedback: (name: string) => `The radio feedback for ${name} was changed.`,
+      undone: (name: string) => `That change was undone. ${name} is back the way it was.`,
+    },
+
+    // How to bind the receiver again, after it was changed. The steps are the wizard's own.
+    bind: {
+      title: 'Bind your receiver',
+      backTo: (name: string) => `Back to ${name}`,
+    },
+
+    // The parts by name, for screen readers: "Change name", "Change receiver".
+    parts: {
+      name: 'Name',
+      receiver: 'Receiver',
+      steeringThrottle: 'Steering and throttle',
+      extras: 'Extras',
+      feedback: 'Radio feedback',
+    } satisfies Record<EditPart, string>,
+  },
+
   comingNext: {
     eyebrow: 'Coming next',
-    edit: {
-      title: (name: string) => `Editing ${name} is coming next`,
-      body: `${comingNextBody} For now you can add, copy, move and delete models.`,
-    },
     openFiles: {
       title: 'Opening files yourself is coming next',
       body: `${comingNextBody} For now, click Connect to try the app with sample models.`,
     },
-    backToModels: 'Back to your models',
     backToConnect: 'Back to Connect',
   },
 
@@ -777,6 +872,7 @@ export const strings = {
       models: 'Your models',
       delete: 'Delete',
       wizard: 'Add a model',
+      edit: 'Edit a model',
       finish: 'Finish and unplug',
     } satisfies Record<ScenarioGroup, string>,
     scenarios: {
@@ -800,7 +896,6 @@ export const strings = {
       'models-move': 'Move: choosing a position',
       'models-moved': 'After a move',
       'models-dragged': 'After a drag',
-      'models-edit-coming-next': 'Edit (coming next)',
       'models-radio-setup': 'Radio setup, with the delete question',
       'delete-confirm': 'Confirm delete: the list will close up',
       'delete-confirm-leave-empty': 'Confirm delete: its place will be left empty',
@@ -843,6 +938,26 @@ export const strings = {
       'wizard-leave': 'The leave question',
       'wizard-bind': 'Step 7: bind your receiver',
       'wizard-added': 'The list after adding',
+      'edit-micro-b': 'Edit page: Micro B',
+      'edit-trx4': 'Edit page: TRX-4',
+      'edit-trx4-22': 'Edit page: TRX-4 2-2',
+      'edit-airboat': 'Edit page: Airboat',
+      'edit-tarantula': 'Edit page: Tarantula',
+      'edit-mini-8ight': 'Edit page: Mini 8ight',
+      'edit-name': 'TRX-4: Name',
+      'edit-receiver': 'TRX-4: Receiver',
+      'edit-steering': 'TRX-4: Steering and throttle',
+      'edit-extras': 'TRX-4: Extras',
+      'edit-feedback': 'TRX-4: Radio feedback',
+      'edit-extras-held': 'Extras: a taken control',
+      'edit-receiver-changed': 'Receiver: another picked',
+      'edit-steering-custom': 'Throttle feel: Custom',
+      'edit-steering-custom-replaced': 'Throttle feel: replaced',
+      'edit-name-problem': 'Name: a name problem',
+      'edit-leave': 'The leave question',
+      'edit-saved': 'After a save, with Undo',
+      'edit-saved-receiver': 'After a receiver change',
+      'edit-bind': 'Bind your receiver',
       'finish-and-unplug': 'Before you unplug',
       'finish-disconnected': 'Disconnected',
     } satisfies Record<ScenarioId, string>,

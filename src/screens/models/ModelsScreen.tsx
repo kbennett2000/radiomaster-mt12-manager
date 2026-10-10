@@ -6,15 +6,18 @@ import { MT12 } from '../../domain/catalog.ts'
 import type { Model } from '../../domain/model.ts'
 import { modelsAfter } from '../../domain/positions.ts'
 import {
+  isEditChange,
   isRadioFull,
   type Action,
   type AppState,
+  type EditChange,
   type Notice as Change,
   type Shift,
 } from '../../state/appState.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import { DeleteDialog } from '../delete/DeleteDialog.tsx'
+import { EditNotice } from '../editModel/EditNotice.tsx'
 import { CopyDialog } from './CopyDialog.tsx'
 import { CurrentModelStrip } from './CurrentModelStrip.tsx'
 import { ModelList } from './ModelList.tsx'
@@ -70,7 +73,7 @@ function shiftWords(shift: Shift): string | null {
 }
 
 /** What the last change did, in plain words. */
-function noticeWords(notice: Exclude<Change, { kind: 'radioSetupSaved' }>): string {
+function noticeWords(notice: Exclude<Change, { kind: 'radioSetupSaved' } | EditChange>): string {
   const say = strings.notice
   switch (notice.kind) {
     case 'added':
@@ -105,6 +108,17 @@ function ChangeNotice({ state, dispatch }: ScreenParts) {
       {strings.notice.dismiss}
     </Button>
   )
+
+  // A change made on a model's Edit page is confirmed the same way here as there.
+  if (isEditChange(notice)) {
+    return (
+      <EditNotice
+        notice={notice}
+        onUndo={() => dispatch({ type: 'changeUndone' })}
+        onDismiss={() => dispatch({ type: 'noticeDismissed' })}
+      />
+    )
+  }
 
   if (notice.kind === 'radioSetupSaved') {
     return (

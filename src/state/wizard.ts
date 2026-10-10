@@ -14,7 +14,7 @@ import {
   type ExtraKind,
   type ExtraProblem,
 } from '../domain/extras.ts'
-import type { Direction, Model, ModelId } from '../domain/model.ts'
+import type { Direction, Model, ModelId, ThrottleFeel } from '../domain/model.ts'
 import { checkModelName, type ModelNameProblem } from '../domain/modelName.ts'
 
 /** Every step of the wizard, in order. */
@@ -67,8 +67,12 @@ export interface ModelDraft {
   steeringDirection: Direction
   steeringTravel: number
   throttleDirection: Direction
-  /** null until the person picks one. Until then the suggestion for the vehicle kind is used. */
-  throttleFeel: OfferedThrottleFeel | null
+  /**
+   * null until the person picks one. Until then the suggestion for the vehicle kind is used.
+   * 'custom' is never offered for a new model. It is only the answer for a model that already
+   * has a feel made on the radio.
+   */
+  throttleFeel: ThrottleFeel | null
   topSpeed: number
   steeringPort: number
   throttlePort: number
@@ -126,7 +130,7 @@ export function newWizard(position: number): WizardState {
 }
 
 /** The throttle feel to show: the person's pick, or Gentle for a crawler and Standard for anything else. */
-export const throttleFeelOf = (draft: ModelDraft): OfferedThrottleFeel =>
+export const throttleFeelOf = (draft: ModelDraft): ThrottleFeel =>
   draft.throttleFeel ?? (draft.vehicleKind === 'crawler' ? 'gentle' : 'standard')
 
 /** The receiver ports steering and throttle use, which no extra may share. */
@@ -181,6 +185,57 @@ export const withExtraChanged = (draft: ModelDraft, id: string, answers: Partial
   ...draft,
   extras: draft.extras.map((extra) => (extra.id === id ? tidied({ ...extra, ...answers, id, kind: extra.kind }) : extra)),
 })
+
+/**
+ * Answers being given, and the state of the screen that asks for them. The wizard has these, and
+ * so does a page that edits one part of a model. Both change them in the same ways, below.
+ */
+export interface Answering {
+  draft: ModelDraft
+  view: WizardView
+}
+
+/** Records answers, or a change to the screen that is not an answer. */
+export function answered<Holder extends Answering>(
+  holder: Holder,
+  answers: Partial<ModelDraft> = {},
+  viewChange: Partial<WizardView> = {},
+): Holder {
+  const draft = withAnswers(holder.draft, answers)
+  const view = { ...holder.view, ...viewChange }
+  // An extra that has just been dropped cannot stay open.
+  const openExtraId = draft.extras.some((extra) => extra.id === view.openExtraId) ? view.openExtraId : null
+  return { ...holder, draft, view: { ...view, openExtraId } }
+}
+
+/** Picks an extra, which opens its questions. */
+export function extraPicked<Holder extends Answering>(holder: Holder, kind: ExtraKind): Holder {
+  const { draft, id } = withExtraPicked(holder.draft, kind)
+  return { ...holder, draft, view: { ...holder.view, openExtraId: id } }
+}
+
+/** Takes an extra away, and closes its questions if they were open. */
+export function extraRemoved<Holder extends Answering>(holder: Holder, id: string): Holder {
+  const openExtraId = holder.view.openExtraId === id ? null : holder.view.openExtraId
+  return { ...holder, draft: withExtraRemoved(holder.draft, id), view: { ...holder.view, openExtraId } }
+}
+
+/** Records answers for one extra. */
+export const extraChanged = <Holder extends Answering>(
+  holder: Holder,
+  id: string,
+  answers: Partial<ExtraAnswers>,
+): Holder => ({ ...holder, draft: withExtraChanged(holder.draft, id, answers) })
+
+/**
+ * Opens the first extra that still needs an answer, so the message about it shows. An unfinished
+ * extra that is already open stays open.
+ */
+export function unfinishedExtraOpened<Holder extends Answering>(holder: Holder): Holder {
+  const unfinished = holder.draft.extras.filter((extra) => problemsInExtra(extra).length > 0).map((extra) => extra.id)
+  if (unfinished.length === 0 || unfinished.includes(holder.view.openExtraId ?? '')) return holder
+  return { ...holder, view: { ...holder.view, openExtraId: unfinished[0] } }
+}
 
 /** What is still missing or wrong on each step. Every value is null or empty when the step is fine. */
 export interface DraftProblems {

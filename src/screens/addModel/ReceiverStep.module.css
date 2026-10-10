@@ -151,3 +151,15 @@
 .panel[hidden] {
   display: none;
 }
+
+/* What changing the receiver will mean, said as soon as a different one is picked. */
+.bindAgain {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-sunken);
+  font-weight: var(--weight-medium);
+}
+
+.bindAgain:empty {
+  display: none;
+}

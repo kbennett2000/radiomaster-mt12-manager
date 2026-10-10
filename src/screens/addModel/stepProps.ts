@@ -1,4 +1,5 @@
 import type { ExtraAnswers, ExtraKind } from '../../domain/extras.ts'
+import type { Model } from '../../domain/model.ts'
 import type { BaseFitting } from '../../domain/radio.ts'
 import type { DraftProblems, ModelDraft, WizardView } from '../../state/wizard.ts'
 
@@ -14,6 +15,11 @@ export interface StepProps {
   namesInUse: readonly string[]
   /** What is fitted on the base of the radio, which decides the controls it has. */
   baseFitting: BaseFitting | null
+  /**
+   * Set when the step is changing a model that is already on the radio, not adding one. The
+   * model is as it was when the page opened. A few things are only said or offered then.
+   */
+  editing?: { model: Model }
   /** Records one or more answers. */
   onChange: (answers: Partial<ModelDraft>) => void
   /** Changes something about the screen that is not an answer, such as the search text. */

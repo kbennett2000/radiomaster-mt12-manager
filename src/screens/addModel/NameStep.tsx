@@ -14,8 +14,11 @@ const kindOptions = VEHICLE_KINDS.map((kind) => ({
   picture: <VehicleKindDrawing kind={kind} />,
 }))
 
-/** Step 1: what the model is called, and what kind of vehicle it is for. */
-export function NameStep({ draft, problems, tried, namesInUse, onChange }: StepProps) {
+/**
+ * Step 1: what the model is called, and what kind of vehicle it is for. The kind only helps the
+ * wizard suggest settings and is not kept with the model, so it is not asked about one being edited.
+ */
+export function NameStep({ draft, problems, tried, namesInUse, editing, onChange }: StepProps) {
   return (
     <div className={styles.step}>
       <ModelNameField
@@ -28,14 +31,16 @@ export function NameStep({ draft, problems, tried, namesInUse, onChange }: StepP
         emptyMessage={text.empty}
         tried={tried}
       />
-      <PictureChoices
-        question={text.kindQuestion}
-        help={text.kindHelp}
-        options={kindOptions}
-        value={draft.vehicleKind}
-        onChange={(vehicleKind) => onChange({ vehicleKind })}
-        problem={tried && problems.vehicleKind ? text.kindMissing : null}
-      />
+      {!editing && (
+        <PictureChoices
+          question={text.kindQuestion}
+          help={text.kindHelp}
+          options={kindOptions}
+          value={draft.vehicleKind}
+          onChange={(vehicleKind) => onChange({ vehicleKind })}
+          problem={tried && problems.vehicleKind ? text.kindMissing : null}
+        />
+      )}
     </div>
   )
 }

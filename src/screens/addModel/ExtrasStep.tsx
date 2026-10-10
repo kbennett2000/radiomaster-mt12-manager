@@ -6,6 +6,7 @@ import { controlKind, gyroGainPortFor } from '../../domain/catalog.ts'
 import {
   controlChoices,
   EXTRAS,
+  type ControlChoice,
   MAX_EXTRA_NAME_LENGTH,
   portChoices,
   problemsInExtra,
@@ -17,6 +18,7 @@ import {
   type ExtraProblem,
   type PortUser,
 } from '../../domain/extras.ts'
+import { controlsHeldIn, leftAloneIn, type HeldControl } from '../../domain/leftAlone.ts'
 import type { CustomWorks, SwitchPosition } from '../../domain/model.ts'
 import { basicPortsOf, COMMON_ON_CRAWLERS, extraKindsFor } from '../../state/wizard.ts'
 import { strings } from '../../strings/en.ts'
@@ -42,6 +44,8 @@ const portUserName = (user: PortUser): string => (user.what === 'extra' ? extraN
 interface Around {
   /** Every extra picked so far, this one included. */
   extras: readonly ExtraAnswers[]
+  /** Controls that settings made on the radio use. They cannot be picked, or freed here. */
+  held: readonly HeldControl[]
   /** True once the person has tried to move on. Missing answers are only pointed out then. */
   tried: boolean
   onChange: (answers: Partial<ExtraAnswers>) => void
@@ -93,14 +97,20 @@ interface ControlQuestionProps extends Around {
   baseFitting: StepProps['baseFitting']
 }
 
+/** What already uses a control, in words, or undefined when it is free. */
+function controlUser({ takenBy, heldBy }: ControlChoice): string | undefined {
+  if (takenBy) return text.usedBy(extraName(takenBy))
+  return heldBy ? text.usedBy(strings.editModel.leftAlone.name(heldBy)) : undefined
+}
+
 /**
  * "Which control works it?" Only the kinds of control that make sense are offered. A control
- * another extra uses is shown greyed, with what uses it.
+ * something else uses is shown greyed, with what uses it.
  */
-function ControlQuestion({ extra, role, extras, baseFitting, tried, onChange }: ControlQuestionProps) {
+function ControlQuestion({ extra, role, extras, held, baseFitting, tried, onChange }: ControlQuestionProps) {
   // One decision at a time: a "Something else" is asked for its control once it has said how it works.
   if (!workingOf(extra, role)) return null
-  const choices = controlChoices(extra, role, extras, baseFitting)
+  const choices = controlChoices(extra, role, extras, baseFitting, held)
   const value = role === 'speed' ? extra.speedControl : extra.control
 
   let question: string = text.controlQuestion
@@ -108,7 +118,7 @@ function ControlQuestion({ extra, role, extras, baseFitting, tried, onChange }: 
 
   // Running out is said at once, not only after Next: there is nothing to pick until one is freed.
   let problem: string | null = null
-  if (value === null && choices.every((choice) => choice.takenBy)) {
+  if (value === null && choices.every((choice) => choice.takenBy || choice.heldBy)) {
     problem = choices.every((choice) => choice.control.kind === 'dial') ? text.noDialFree : text.noControlFree
   } else if (value === null && tried) {
     problem = text.problems[role === 'speed' ? 'speedControlMissing' : 'controlMissing']
@@ -119,11 +129,11 @@ function ControlQuestion({ extra, role, extras, baseFitting, tried, onChange }: 
       question={question}
       size="field"
       layout="grid"
-      options={choices.map(({ control, takenBy }) => ({
-        value: control.id,
-        label: strings.controls[control.id],
-        note: strings.controlKinds[control.kind],
-        unavailable: takenBy ? text.usedBy(extraName(takenBy)) : undefined,
+      options={choices.map((choice) => ({
+        value: choice.control.id,
+        label: strings.controls[choice.control.id],
+        note: strings.controlKinds[choice.control.kind],
+        unavailable: controlUser(choice),
       }))}
       value={value}
       onChange={(control) => onChange(role === 'speed' ? { speedControl: control } : { control })}
@@ -140,8 +150,8 @@ interface QuestionsProps extends Around {
 }
 
 /** The questions for one extra, shown right under it while it is the one being answered. */
-function ExtraQuestions({ extra, extras, baseFitting, draft, tried, onChange, onDone }: QuestionsProps) {
-  const around: Around = { extras, tried, onChange }
+function ExtraQuestions({ extra, extras, held, baseFitting, draft, tried, onChange, onDone }: QuestionsProps) {
+  const around: Around = { extras, held, tried, onChange }
   const working = workingOf(extra)
   const onSwitch = extra.control !== null && controlKind(extra.control) === 'switch3'
   const ports = portChoices(extra, extras, basicPortsOf(draft))
@@ -300,6 +310,7 @@ export function ExtrasStep({
   view,
   tried,
   baseFitting,
+  editing,
   onViewChange,
   onExtraPicked,
   onExtraRemoved,
@@ -307,12 +318,21 @@ export function ExtrasStep({
 }: StepProps) {
   const isCrawler = draft.vehicleKind === 'crawler'
   const customs = draft.extras.filter((extra) => extra.kind === 'customExtra')
+  // A model being edited can have settings that were made on the radio. They are not in this
+  // list, but the controls they use are taken, and a line under the list names them.
+  const held = editing ? controlsHeldIn(editing.model) : []
+  const alsoOnModel = editing
+    ? leftAloneIn(editing.model)
+        .filter((setting) => 'control' in setting)
+        .map(strings.editModel.leftAlone.name)
+    : []
 
   function detail(extra: ExtraAnswers) {
     return view.openExtraId === extra.id ? (
       <ExtraQuestions
         extra={extra}
         extras={draft.extras}
+        held={held}
         baseFitting={baseFitting}
         draft={draft}
         tried={tried}
@@ -381,6 +401,8 @@ export function ExtrasStep({
           </li>
         )}
       </ul>
+
+      {alsoOnModel.length > 0 && <p className={styles.alsoOnModel}>{strings.editModel.leftAlone.alsoOnModel(alsoOnModel)}</p>}
     </div>
   )
 }
