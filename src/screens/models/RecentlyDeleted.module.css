@@ -31,7 +31,11 @@
   overflow-wrap: anywhere;
 }
 
-.receiver {
-  margin-right: auto;
+.detail,
+.was {
   color: var(--color-text-muted);
+}
+
+.was {
+  margin-right: auto;
 }

@@ -4,7 +4,8 @@ import styles from './Button.module.css'
 interface Look {
   /** 'primary' is for the one main action on a screen. */
   variant?: 'primary' | 'secondary' | 'quiet' | 'danger'
-  size?: 'medium' | 'large'
+  /** 'small' is for actions that repeat on every row of a list. */
+  size?: 'small' | 'medium' | 'large'
   /** An icon to show before the words. Buttons always have words. */
   icon?: ReactNode
 }

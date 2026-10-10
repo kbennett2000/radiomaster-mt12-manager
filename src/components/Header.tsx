@@ -2,7 +2,7 @@ import { strings } from '../strings/en.ts'
 import { paths } from '../state/useHashRoute.ts'
 import { ButtonLink } from './Button.tsx'
 import styles from './Header.module.css'
-import { PlugIcon, SetupIcon, WheelMark } from './icons.tsx'
+import { EjectIcon, PlugIcon, SetupIcon, WheelMark } from './icons.tsx'
 
 interface HeaderProps {
   /** How many models are on the connected radio, and how many it can hold. Leave out when not connected. */
@@ -25,9 +25,14 @@ export function Header({ connected }: HeaderProps) {
               <PlugIcon />
               <span>{strings.header.connected(connected.modelCount, connected.maxModels)}</span>
             </p>
-            <ButtonLink variant="quiet" href={paths.radioSetup} icon={<SetupIcon />}>
-              {strings.header.radioSetup}
-            </ButtonLink>
+            <nav className={styles.actions}>
+              <ButtonLink variant="quiet" href={paths.radioSetup} icon={<SetupIcon />}>
+                {strings.header.radioSetup}
+              </ButtonLink>
+              <ButtonLink variant="quiet" href={paths.finish} icon={<EjectIcon />}>
+                {strings.header.finishAndUnplug}
+              </ButtonLink>
+            </nav>
           </>
         )}
       </div>

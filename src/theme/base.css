@@ -69,6 +69,16 @@ a {
   text-underline-offset: 0.2em;
 }
 
+/* Words for screen readers only, where sighted people get the same meaning from layout. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* One focus style everywhere, visible on every surface. */
 :focus-visible {
   outline: var(--focus-ring) solid var(--color-focus);

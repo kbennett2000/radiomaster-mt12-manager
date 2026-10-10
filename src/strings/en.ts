@@ -26,6 +26,7 @@ export const strings = {
   header: {
     connected: (count: number, max: number) => `Connected to your ${RADIO_NAME} · ${count} of ${max} models`,
     radioSetup: 'Radio setup',
+    finishAndUnplug: 'Finish and unplug',
   },
 
   connect: {
@@ -35,7 +36,7 @@ export const strings = {
     steps: [
       {
         title: 'Plug in a USB cable',
-        body: 'Use the USB port under the cover, next to the SD card slot. Not the port on the base, which is only for charging.',
+        body: 'Use the USB port under the cover, next to the SD card slot. Not the charging port on the base.',
       },
       {
         title: 'Choose “USB Storage (SD)”',
@@ -50,6 +51,7 @@ export const strings = {
     radioMenuChoice: 'USB Storage (SD)',
     connectButton: 'Connect',
     openFilesLink: 'Open files instead',
+    disconnected: 'Your radio is disconnected. Connect it again whenever you like.',
     connecting: {
       button: 'Connecting…',
       status: 'Waiting for you to pick your radio’s drive…',
@@ -74,7 +76,7 @@ export const strings = {
 
   baseFitting: {
     question: 'What is fitted on the base of your radio?',
-    help: 'Look at the bottom of your radio. Your answer tells the app which controls you have.',
+    help: 'Look at the top of the base your radio stands on. Your answer tells the app which controls you have.',
     changeLater: 'You can change this later in Radio setup.',
     chooseFirst: 'Choose one of the three to carry on.',
     options: {
@@ -90,17 +92,44 @@ export const strings = {
     back: 'Back to your models',
   },
 
+  // The steps for unplugging safely. This wording is a placeholder: it has not been checked on a
+  // real radio yet, and it will be once the app writes to one.
+  finish: {
+    title: 'Before you unplug',
+    steps: [
+      'Eject your radio’s drive on this computer, the same way you eject a USB stick.',
+      'Unplug the USB cable.',
+      'Your radio reloads your models. Check the list on its screen.',
+    ],
+    done: 'I’ve unplugged it',
+  },
+
   models: {
     title: 'Your models',
+    reorderHint: 'To change the order, drag a row by its handle or use Move.',
     addModel: 'Add a model',
-    currentBadge: 'Your radio is set to this model',
-    receiverType: 'Receiver type',
+    columns: {
+      position: 'Position',
+      model: 'Model',
+      receiverType: 'Receiver type',
+    },
+    dragHandle: (name: string) => `Drag to move ${name}`,
+    currentStrip: (name: string, position: number) => `Your radio is set to ${name}, in position ${position}.`,
+    showInList: 'Show it in the list',
+    currentMark: 'Your radio is set to this',
     edit: 'Edit',
     copy: 'Copy',
+    move: 'Move',
     delete: 'Delete',
     editNamed: (name: string) => `Edit ${name}`,
     copyNamed: (name: string) => `Copy ${name}`,
+    moveNamed: (name: string) => `Move ${name}`,
     deleteNamed: (name: string) => `Delete ${name}`,
+    emptyPlace: 'Empty',
+    addHere: 'Add a model here',
+    addHereNamed: (position: number) => `Add a model in position ${position}`,
+    emptyAfter: (first: number, last: number) =>
+      first === last ? `Position ${first} is empty.` : `Positions ${first} to ${last} are empty.`,
     empty: {
       title: 'No models yet',
       body: 'Your radio has no models on it. Add your first one to get started.',
@@ -109,29 +138,26 @@ export const strings = {
       `Your radio is full. It holds ${max} models. To add or copy one, first delete a model you no longer need.`,
   },
 
-  summary: {
-    steering: 'steering',
-    throttle: 'throttle',
-    basicsOnly: (basics: string) => `${basics} only.`,
-    basicsPlus: (basics: string, extras: string) => `${basics}, plus ${extras}.`,
-    extrasOnly: (extras: string) => `${extras}.`,
-    nothing: 'Nothing set up yet.',
-    customThrottleFeel: 'custom throttle feel',
-    feedback: (kinds: string) => `Radio feedback: ${kinds}.`,
+  // What a model has, shown as short tags on its row. Steering and throttle are never tags,
+  // because every model has them.
+  tags: {
+    noExtras: 'Steering and throttle only',
+    customThrottleFeel: 'Custom throttle feel',
+    feedback: (kinds: string) => `Radio feedback: ${kinds}`,
   },
 
   features: {
     twoSpeedTransmission: '2-speed transmission',
-    frontDiffLock: 'front diff lock',
-    rearDiffLock: 'rear diff lock',
-    lights: 'lights',
-    cruiseControl: 'cruise control',
-    gyroGain: 'gyro gain',
-    dragBrake: 'drag brake',
-    throttleArming: 'throttle arming switch',
-    throttlePresets: 'throttle presets',
-    hornSound: 'horn sound',
-    oneButtonPreset: (name: string) => `one-button preset “${name}”`,
+    frontDiffLock: 'Front diff lock',
+    rearDiffLock: 'Rear diff lock',
+    lights: 'Lights',
+    cruiseControl: 'Cruise control',
+    gyroGain: 'Gyro gain',
+    dragBrake: 'Drag brake',
+    throttleArming: 'Throttle arming switch',
+    throttlePresets: 'Throttle presets',
+    hornSound: 'Horn sound',
+    oneButtonPreset: (name: string) => `One-button preset: ${name}`,
     customExtra: (name: string) => name,
   },
 
@@ -143,7 +169,7 @@ export const strings = {
   } satisfies Record<FeedbackKind, string>,
 
   // Radio controls: the name printed on the radio, plus a plain description.
-  // No screen shows these yet. The edit screens in the next cycle will.
+  // No screen shows these yet. The edit screens will.
   controls: {
     wheel: 'steering wheel',
     trigger: 'throttle trigger',
@@ -180,6 +206,28 @@ export const strings = {
     cancel: 'Cancel',
   },
 
+  moveModel: {
+    title: (name: string) => `Move ${name} to which position?`,
+    positionLabel: 'Position',
+    // One line of the list of positions to choose from.
+    placeHolding: (position: number, name: string) => `${position} · ${name}`,
+    placeEmpty: (position: number) => `${position} · Empty`,
+    placeOwn: (position: number, name: string) => `${position} · ${name} (where it is now)`,
+    // What is in the chosen position now.
+    nowHolds: (position: number, name: string) => `${name} is in position ${position} now.`,
+    nowEmpty: (position: number) => `Position ${position} is empty now.`,
+    alreadyThere: (name: string, position: number) =>
+      `${name} is already in position ${position}. Choose a different position to move it.`,
+    // What else shifts, in one sentence.
+    nothingElseMoves: 'No other model moves.',
+    oneOtherMoves: (name: string, from: number, to: number) =>
+      `${name} moves from position ${from} to position ${to}.`,
+    othersMove: (count: number, first: number, last: number, direction: 'up' | 'down') =>
+      `The ${count} models in positions ${first} to ${last} each move ${direction} one place.`,
+    confirm: 'Move model',
+    cancel: 'Cancel',
+  },
+
   radioFull: {
     title: 'Your radio is full',
     body: (max: number) =>
@@ -200,10 +248,13 @@ export const strings = {
 
   notice: {
     savedTitle: 'Saved to your radio',
-    copied: (name: string) => `“${name}” was added to your models.`,
-    deleted: (name: string) => `“${name}” was deleted. A copy is kept under Recently deleted, at the bottom of this page.`,
-    restored: (name: string) => `“${name}” is back in your models.`,
-    safeToUnplug: 'It’s safe to unplug your radio when you’re done.',
+    copied: (name: string, position: number) => `“${name}” was added in position ${position}.`,
+    deleted: (name: string, position: number) =>
+      `“${name}” was deleted, and position ${position} is now empty. A copy is kept under Recently deleted, at the bottom of this page.`,
+    moved: (name: string, position: number) => `“${name}” moved to position ${position}.`,
+    restored: (name: string, position: number) => `“${name}” is back in position ${position}.`,
+    restoredElsewhere: (name: string, wanted: number, position: number) =>
+      `“${name}” is back. Position ${wanted} was taken, so it went to position ${position}.`,
     undo: 'Undo',
     dismiss: 'Dismiss',
     radioSetupTitle: 'Radio setup updated',
@@ -213,6 +264,7 @@ export const strings = {
   recentlyDeleted: {
     title: 'Recently deleted',
     body: 'A copy of each model you delete is kept here, so you can bring it back.',
+    wasIn: (position: number) => `Was in position ${position}`,
     restore: 'Restore',
     restoreNamed: (name: string) => `Restore ${name}`,
   },
@@ -221,11 +273,11 @@ export const strings = {
     eyebrow: 'Coming next',
     edit: {
       title: (name: string) => `Editing ${name} is coming next`,
-      body: `${comingNextBody} For now you can copy and delete models.`,
+      body: `${comingNextBody} For now you can copy, move and delete models.`,
     },
     add: {
       title: 'Adding a model is coming next',
-      body: `${comingNextBody} For now you can copy and delete models.`,
+      body: `${comingNextBody} For now you can copy, move and delete models.`,
     },
     openFiles: {
       title: 'Opening files yourself is coming next',
@@ -243,6 +295,7 @@ export const strings = {
       connect: 'Connect',
       models: 'Your models',
       delete: 'Delete',
+      finish: 'Finish and unplug',
     } satisfies Record<ScenarioGroup, string>,
     scenarios: {
       'connect-first-visit': 'First visit',
@@ -251,13 +304,17 @@ export const strings = {
       'connect-wrong-folder': 'Wrong folder picked',
       'connect-connected-first-time': 'Connected, first time: what is on the base?',
       'connect-open-files-coming-next': 'Open files instead (coming next)',
-      'models-20': '20 models',
+      'models-20': 'The list with 20 models',
+      'models-gaps': 'The list with empty places between models',
       'models-none': 'No models yet',
       'models-full': '60 of 60',
       'models-full-explained': '60 of 60: Add or Copy clicked',
       'models-copy': 'Copy: asking for a name',
       'models-copy-name-too-long': 'Copy: name too long',
       'models-copy-saved': 'Copy: saved',
+      'models-move': 'Move: choosing a position',
+      'models-moved': 'After a move',
+      'models-dragged': 'After a drag',
       'models-edit-coming-next': 'Edit (coming next)',
       'models-add-coming-next': 'Add a model (coming next)',
       'models-radio-setup': 'Radio setup',
@@ -267,6 +324,9 @@ export const strings = {
       'delete-current-model-picked': 'Same, with a model picked',
       'delete-done': 'After deleting: Undo and Recently deleted',
       'delete-restored': 'After Restore',
+      'delete-restored-elsewhere': 'After Restore: the old place was taken',
+      'finish-and-unplug': 'Before you unplug',
+      'finish-disconnected': 'Disconnected',
     } satisfies Record<ScenarioId, string>,
   },
 } as const

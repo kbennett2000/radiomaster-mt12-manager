@@ -1,0 +1,26 @@
+.strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-medium);
+  background: var(--color-accent-soft);
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--color-accent-strong);
+}
+
+.words {
+  margin-right: auto;
+  font-weight: var(--weight-medium);
+}
+
+.show {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  white-space: nowrap;
+}

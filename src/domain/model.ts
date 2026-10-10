@@ -119,19 +119,15 @@ export type FeedbackKind = 'voiceCallouts' | 'beeps' | 'vibration' | 'ledColour'
 /** One vehicle's setup on the radio. */
 export interface Model {
   id: ModelId
+  /**
+   * The model's place in the radio's own list, counted from 1 up to MT12.maxModels.
+   * No two models share a place, and a place no model has is empty. See positions.ts for the rules.
+   */
+  position: number
   /** At most MT12.maxModelNameLength characters. */
   name: string
   receiverTypeId: ReceiverTypeId
   /** What the vehicle has, in the order the owner sees it. */
   features: readonly Feature[]
   feedback: readonly FeedbackKind[]
-}
-
-/** A deleted model, kept so the delete can be undone. */
-export interface DeletedModel {
-  model: Model
-  /** The model it sat directly after, or null if it was first. Restore puts it back there. */
-  afterModelId: ModelId | null
-  /** Where it sat in the list. Restore falls back to this when that neighbour is gone too. */
-  position: number
 }

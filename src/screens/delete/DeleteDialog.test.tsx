@@ -14,5 +14,9 @@ test('Delete names the model and will not delete the current model until another
   fireEvent.click(dialog.getByRole('button', { name: strings.deleteModel.confirm }))
 
   expect(dialog.getByText(strings.deleteModel.switchMissing)).toBeTruthy()
-  expect(within(screen.getByRole('main')).getAllByRole('article')).toHaveLength(20)
+  // Every row has one Move action, so counting them counts the models still in the list.
+  const moveActions = within(screen.getByRole('main')).getAllByRole('button', {
+    name: new RegExp(`^${strings.models.move} `),
+  })
+  expect(moveActions).toHaveLength(20)
 })

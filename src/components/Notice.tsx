@@ -13,13 +13,14 @@ interface NoticeProps {
 
 /**
  * A calm confirmation shown after a change. It takes keyboard focus each time a new message
- * appears, so the message is read out and its buttons are the next stop.
+ * appears, so the message is read out and its buttons are the next stop. Taking focus does not
+ * scroll the page: whoever shows the notice keeps it in view, so the person keeps their place.
  */
 export function Notice({ title, children, actions, announceKey }: NoticeProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    ref.current?.focus()
+    ref.current?.focus({ preventScroll: true })
   }, [announceKey])
 
   return (

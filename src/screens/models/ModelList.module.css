@@ -1,0 +1,213 @@
+/* The radio's list: one white surface, one row per place, divided by hairlines. */
+
+.surface {
+  overflow: hidden;
+  border: var(--border-thin) solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.head,
+.row,
+.emptyRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--row-place-width) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  padding: var(--space-1) var(--space-4);
+  line-height: var(--row-line-height);
+}
+
+.head {
+  background: var(--color-page);
+  color: var(--color-text-muted);
+  line-height: var(--line-body);
+}
+
+.row,
+.emptyRow {
+  border-top: var(--border-thin) solid var(--color-border);
+}
+
+.row:hover {
+  background: var(--color-page);
+}
+
+/* A row that "Show it in the list" has just scrolled to. */
+.row:focus {
+  background: var(--color-accent-soft);
+}
+
+/* The model the radio is set to: a bar down the left edge, plus the words in the row. */
+.row[data-current]::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--space-1);
+  background: var(--color-accent);
+}
+
+.row[data-dragging] {
+  opacity: 0.45;
+}
+
+/* While dragging: a line where the row would land. */
+.row[data-drop]::after,
+.emptyRow[data-drop]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: var(--focus-ring);
+  background: var(--color-accent);
+}
+
+.row[data-drop='before']::after,
+.emptyRow[data-drop='before']::after {
+  top: 0;
+}
+
+.row[data-drop='after']::after,
+.emptyRow[data-drop='after']::after {
+  bottom: 0;
+}
+
+.emptyRow {
+  background: var(--color-page);
+}
+
+/* The handle and the position number. The numbers are right-aligned so they line up. */
+.handle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--row-line-height);
+  color: var(--color-text-muted);
+}
+
+.handle[draggable='true'] {
+  cursor: grab;
+}
+
+.handle[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.grip {
+  display: inline-flex;
+}
+
+.number {
+  margin-left: auto;
+  padding-right: var(--space-2);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-medium);
+}
+
+/*
+ * The name and tags run on like a line of text. An invisible block floated to the right holds
+ * open the space on the first line where the receiver type and the actions sit, so a second
+ * line, if there is one, can use the full width underneath them.
+ */
+.flow {
+  min-width: 0;
+}
+
+.flow::before {
+  content: '';
+  float: right;
+  width: calc(var(--row-side-width) + var(--space-3));
+  height: var(--row-line-height);
+}
+
+.side {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: var(--row-side-width);
+  height: var(--row-line-height);
+}
+
+/* In the heading row the labels are shorter than a row's line, so the box follows the row. */
+.head .side {
+  top: 0;
+  height: 100%;
+}
+
+.receiver {
+  flex: none;
+  width: var(--row-receiver-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+/* Every name gets the same width, so the tags start in a column. */
+.name {
+  display: inline-block;
+  min-width: var(--row-name-width);
+  margin-right: var(--space-3);
+  font-size: var(--text-heading-3);
+  line-height: 1;
+  letter-spacing: normal;
+}
+
+.tags {
+  display: inline;
+}
+
+.tag,
+.mark {
+  display: inline-flex;
+  align-items: center;
+  height: var(--tag-height);
+  margin-right: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tag {
+  background: var(--color-surface-sunken);
+}
+
+.mark {
+  gap: var(--space-1);
+  padding-left: var(--space-1);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-weight: var(--weight-medium);
+}
+
+/* Quiet words stay together: they move to the next line whole, never half a phrase. */
+.quiet {
+  display: inline-block;
+  margin-right: var(--space-2);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.emptyWords {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.after {
+  margin-top: var(--space-3);
+  padding-left: var(--space-4);
+  color: var(--color-text-muted);
+}

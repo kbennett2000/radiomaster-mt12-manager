@@ -14,8 +14,13 @@
   box-shadow: var(--shadow-raised);
 }
 
+/* Closed, the panel is only as wide as its tab. */
+.panel:not([open]) .body {
+  display: none;
+}
+
 .tab {
-  padding: var(--space-4) var(--space-2);
+  padding: var(--space-3) var(--space-1);
   font-weight: var(--weight-bold);
   writing-mode: vertical-rl;
   cursor: pointer;
@@ -48,8 +53,8 @@
 
 .groups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 .group {

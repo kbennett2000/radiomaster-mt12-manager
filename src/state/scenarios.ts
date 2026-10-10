@@ -9,9 +9,9 @@ import type { BaseFitting } from '../domain/radio.ts'
 import { initialState, reducer, type Action, type AppState } from './appState.ts'
 import { paths } from './useHashRoute.ts'
 
-export type ScenarioGroup = 'connect' | 'models' | 'delete'
+export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'finish'
 
-export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete']
+export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'finish']
 
 export const SCENARIO_IDS = [
   'connect-first-visit',
@@ -21,12 +21,16 @@ export const SCENARIO_IDS = [
   'connect-connected-first-time',
   'connect-open-files-coming-next',
   'models-20',
+  'models-gaps',
   'models-none',
   'models-full',
   'models-full-explained',
   'models-copy',
   'models-copy-name-too-long',
   'models-copy-saved',
+  'models-move',
+  'models-moved',
+  'models-dragged',
   'models-edit-coming-next',
   'models-add-coming-next',
   'models-radio-setup',
@@ -36,6 +40,9 @@ export const SCENARIO_IDS = [
   'delete-current-model-picked',
   'delete-done',
   'delete-restored',
+  'delete-restored-elsewhere',
+  'finish-and-unplug',
+  'finish-disconnected',
 ] as const
 
 export type ScenarioId = (typeof SCENARIO_IDS)[number]
@@ -61,8 +68,8 @@ const ready = (
   baseFitting: BaseFitting = 'blankCover',
 ): AppState => after(justConnected(models, currentModelId), { type: 'baseFittingAnswered', baseFitting })
 
-// Model ids from the sample data: m03 is TRX-4, m08 is Slash 2WD, m11 is Micro B,
-// m14 is MojaveGrom, and m20 (Mini 8ight) is the one the radio is set to.
+// Model ids from the sample data follow the position each model starts in: m03 is TRX-4,
+// m08 is Slash 2WD, m11 is Micro B, m14 is MojaveGrom, and m20 (Mini 8ight) is the one the radio is set to.
 const copyName = 'TRX-4 Snow'
 
 const threeDeleted = after(
@@ -86,6 +93,8 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-open-files-coming-next': { group: 'connect', path: paths.openFiles, state: notConnected },
 
   'models-20': { group: 'models', path: paths.home, state: ready() },
+  // Three deletes leave positions 8, 11 and 14 empty, with models on both sides of each.
+  'models-gaps': { group: 'models', path: paths.home, state: after(threeDeleted, { type: 'noticeDismissed' }) },
   'models-none': { group: 'models', path: paths.home, state: ready([], null) },
   'models-full': { group: 'models', path: paths.home, state: ready(FULL_RADIO_MODELS) },
   'models-full-explained': {
@@ -107,6 +116,22 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
     group: 'models',
     path: paths.home,
     state: after(ready(), { type: 'copyConfirmed', modelId: 'm03', name: copyName }),
+  },
+  'models-move': {
+    group: 'models',
+    path: paths.home,
+    state: { ...ready(), dialog: { type: 'move', modelId: 'm03', toPosition: 7 } },
+  },
+  'models-moved': {
+    group: 'models',
+    path: paths.home,
+    state: after(ready(), { type: 'modelMoved', modelId: 'm03', toPosition: 7 }),
+  },
+  // A drag ends in the same action as the Move dialog. Here Mini 8ight was dragged from 20 up to 2.
+  'models-dragged': {
+    group: 'models',
+    path: paths.home,
+    state: after(ready(), { type: 'modelMoved', modelId: SAMPLE_CURRENT_MODEL_ID, toPosition: 2 }),
   },
   'models-edit-coming-next': { group: 'models', path: paths.editModel('m03'), state: ready() },
   'models-add-coming-next': { group: 'models', path: paths.addModel, state: ready() },
@@ -146,6 +171,20 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
     path: paths.home,
     state: after(threeDeleted, { type: 'restoreRequested', modelId: 'm11' }),
   },
+  // Micro B's old place, 11, is taken by a copy before it is restored, so it goes to the next empty place.
+  'delete-restored-elsewhere': {
+    group: 'delete',
+    path: paths.home,
+    state: after(
+      ready(),
+      { type: 'deleteConfirmed', modelId: 'm11' },
+      { type: 'copyConfirmed', modelId: 'm10', name: 'Slash 4x4b' },
+      { type: 'restoreRequested', modelId: 'm11' },
+    ),
+  },
+
+  'finish-and-unplug': { group: 'finish', path: paths.finish, state: ready() },
+  'finish-disconnected': { group: 'finish', path: paths.home, state: after(ready(), { type: 'disconnected' }) },
 }
 
 export const SCENARIOS: readonly Scenario[] = SCENARIO_IDS.map((id) => ({ id, ...details[id] }))

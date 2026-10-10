@@ -29,7 +29,7 @@ export function ReviewerPanel() {
   const activeId = new URLSearchParams(window.location.search).get('state')
 
   return (
-    <details className={styles.panel}>
+    <details className={styles.panel} data-review-panel>
       <summary className={styles.tab}>{text.tab}</summary>
       <div className={styles.body}>
         <p>{text.about}</p>
@@ -43,6 +43,7 @@ export function ReviewerPanel() {
                     <a
                       href={scenarioHref(scenario)}
                       data-review-state={scenario.id}
+                      data-review-group={scenario.group}
                       aria-current={scenario.id === activeId ? 'page' : undefined}
                       onClick={jump}
                     >

@@ -85,7 +85,7 @@ const basePlate = (
   </>
 )
 
-/** The base of the radio seen from below, with one of the three things that can be fitted to it. */
+/** The top of the radio's base, with one of the three things that can be fitted to it. */
 export function BaseFittingDrawing({ fitting }: { fitting: BaseFitting }) {
   return (
     <Drawing viewBox="0 0 200 120">

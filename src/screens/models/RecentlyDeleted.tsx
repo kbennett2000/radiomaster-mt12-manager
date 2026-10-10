@@ -1,12 +1,13 @@
 import { useId } from 'react'
 import { Button } from '../../components/Button.tsx'
 import { UndoIcon } from '../../components/icons.tsx'
-import type { DeletedModel, ModelId } from '../../domain/model.ts'
+import type { Model, ModelId } from '../../domain/model.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './RecentlyDeleted.module.css'
 
 interface RecentlyDeletedProps {
-  deleted: readonly DeletedModel[]
+  /** Deleted models, newest first. Each still carries the position it was deleted from. */
+  deleted: readonly Model[]
   onRestore: (modelId: ModelId) => void
 }
 
@@ -21,10 +22,11 @@ export function RecentlyDeleted({ deleted, onRestore }: RecentlyDeletedProps) {
       <h2 id={titleId}>{text.title}</h2>
       <p className={styles.body}>{text.body}</p>
       <ul className={styles.list}>
-        {deleted.map(({ model }) => (
+        {deleted.map((model) => (
           <li key={model.id} className={styles.row}>
             <span className={styles.name}>{model.name}</span>
-            <span className={styles.receiver}>{strings.receiverTypes[model.receiverTypeId]}</span>
+            <span className={styles.detail}>{strings.receiverTypes[model.receiverTypeId]}</span>
+            <span className={styles.was}>{text.wasIn(model.position)}</span>
             <Button icon={<UndoIcon />} aria-label={text.restoreNamed(model.name)} onClick={() => onRestore(model.id)}>
               {text.restore}
             </Button>

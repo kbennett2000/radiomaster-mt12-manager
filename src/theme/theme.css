@@ -74,11 +74,17 @@
   /* Sizes */
   --content-width: 75rem;
   --reading-width: 42rem;
+  --control-height-small: 2rem;
   --control-height: 3rem;
   --control-height-large: 3.5rem;
   --icon-size: 1.25rem;
-  --card-min-width: 21rem;
+  --row-line-height: 2rem;
+  --row-place-width: 4.5rem;
+  --row-name-width: 8.5rem;
+  --row-receiver-width: 9rem;
+  --row-side-width: 24rem;
+  --tag-height: 1.625rem;
   --picture-width: 13rem;
   --dialog-width: 34rem;
-  --review-panel-width: 60rem;
+  --review-panel-width: 68rem;
 }
