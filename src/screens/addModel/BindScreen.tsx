@@ -10,10 +10,27 @@ import { WizardFrame } from './WizardFrame.tsx'
 const text = strings.addModel.bind
 
 /**
+ * The steps for binding a receiver to a model, numbered. The wording is a placeholder until it
+ * has been checked on a real radio.
+ */
+export function BindSteps({ modelName }: { modelName: string }) {
+  return (
+    <ol className={styles.steps}>
+      {text.steps(modelName).map((step, index) => (
+        <li key={step} className={styles.step}>
+          <span className={styles.number} aria-hidden="true">
+            {index + 1}
+          </span>
+          <span>{step}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+/**
  * Step 7, the last page of the wizard: how to bind the receiver. The model is already in the list
  * when this shows, so there is nothing here to lose and no question on the way out.
- *
- * The steps themselves are placeholder wording until they have been checked on a real radio.
  */
 export function BindScreen({ model }: { model: Model }) {
   return (
@@ -23,16 +40,7 @@ export function BindScreen({ model }: { model: Model }) {
           <h2>{text.title}</h2>
           <p className={stepStyles.intro}>{text.intro}</p>
         </div>
-        <ol className={styles.steps}>
-          {text.steps(model.name).map((step, index) => (
-            <li key={step} className={styles.step}>
-              <span className={styles.number} aria-hidden="true">
-                {index + 1}
-              </span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
+        <BindSteps modelName={model.name} />
         <div className={styles.actions}>
           <ButtonLink variant="primary" size="large" icon={<BackIcon />} href={paths.home}>
             {text.backToModels}

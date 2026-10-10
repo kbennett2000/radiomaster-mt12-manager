@@ -7,6 +7,7 @@
 
 import { EXTRA_PORTS, controlKind, controlsFor, gyroGainPortFor, type ReceiverTypeId } from './catalog.ts'
 import { colourStatesFor, givesFeedback, keepingColoursFor, NO_FEEDBACK } from './feedback.ts'
+import type { HeldControl, LeftAlone } from './leftAlone.ts'
 import type { CustomWorks, ExtraFeedback, ExtraState, Feature, SwitchPosition } from './model.ts'
 import type { BaseFitting, ControlDefinition, ControlId, ControlKind } from './radio.ts'
 
@@ -141,21 +142,26 @@ export const colourStatesOf = (extra: Pick<ExtraAnswers, 'kind' | 'works' | 'con
 const controlFor = (extra: ExtraAnswers, role: ControlRole): ControlId | null =>
   role === 'speed' ? extra.speedControl : extra.control
 
-/** A control an extra could use, and the other extra that already uses it, if any. */
+/** A control an extra could use, and what already uses it, if anything. */
 export interface ControlChoice {
   control: ControlDefinition
+  /** The other extra that uses it. */
   takenBy: ExtraAnswers | null
+  /** A setting made on the radio that uses it. The app leaves those alone, so it cannot be freed here. */
+  heldBy: LeftAlone | null
 }
 
 /**
  * The controls on this radio that can work the extra in the given part. Only kinds that make
- * sense are offered. A control another extra already uses is still listed, marked as taken.
+ * sense are offered. A control something else already uses is still listed, marked as taken:
+ * by another extra, or by a setting made on the radio (`held`).
  */
 export function controlChoices(
   extra: ExtraAnswers,
   role: ControlRole,
   extras: readonly ExtraAnswers[],
   baseFitting: BaseFitting | null,
+  held: readonly HeldControl[] = [],
 ): ControlChoice[] {
   const working = workingOf(extra, role)
   if (!working) return []
@@ -168,6 +174,7 @@ export function controlChoices(
           (other) =>
             other.id !== extra.id && (other.control === control.id || other.speedControl === control.id),
         ) ?? null,
+      heldBy: held.find((holding) => holding.control === control.id)?.by ?? null,
     }))
 }
 
@@ -302,6 +309,44 @@ export function featureFrom(extra: ExtraAnswers): Feature | null {
       return extra.works === 'onOff'
         ? { kind: 'customExtra', name: extra.name.trim(), works: extra.works, control, port, ...onPosition, ...feedback }
         : { kind: 'customExtra', name: extra.name.trim(), works: extra.works, control, port, ...feedback }
+  }
+}
+
+/**
+ * The other way round from `featureFrom`: the answers that would make a feature of a model. Null
+ * for steering, throttle and anything the wizard does not offer, which are not extras.
+ */
+export function answersFrom(feature: Feature, id: string): ExtraAnswers | null {
+  if (feature.kind === 'steering' || feature.kind === 'throttle') return null
+  if (feature.kind === 'throttlePresets' || feature.kind === 'oneButtonPreset') return null
+  const answers = newExtra(id, feature.kind)
+  const feedback = ('feedback' in feature ? feature.feedback : undefined) ?? NO_FEEDBACK
+  const onPosition = ('onPosition' in feature ? feature.onPosition : undefined) ?? answers.onPosition
+
+  switch (feature.kind) {
+    case 'cruiseControl':
+      return tidied({ ...answers, control: feature.onOffControl, speedControl: feature.speedControl, feedback })
+    case 'throttleSafetyLock':
+      return tidied({ ...answers, control: feature.control, onPosition, feedback })
+    case 'hornSound':
+      return tidied({ ...answers, control: feature.control })
+    case 'twoSpeedTransmission':
+      return tidied({ ...answers, control: feature.control, port: feature.port, swapped: feature.swapped === true, feedback })
+    case 'gyroGain':
+    case 'dragBrake':
+      return tidied({ ...answers, control: feature.control, port: feature.port })
+    case 'customExtra':
+      return tidied({
+        ...answers,
+        name: feature.name,
+        works: feature.works,
+        control: feature.control,
+        port: feature.port,
+        onPosition,
+        feedback,
+      })
+    default:
+      return tidied({ ...answers, control: feature.control, port: feature.port, onPosition, feedback })
   }
 }
 

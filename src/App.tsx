@@ -7,11 +7,15 @@ import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from './sample/sampleModels.ts
 import { AddModelScreen } from './screens/addModel/AddModelScreen.tsx'
 import { BindScreen } from './screens/addModel/BindScreen.tsx'
 import { ConnectScreen } from './screens/connect/ConnectScreen.tsx'
+import { EditPartScreen } from './screens/editModel/EditPartScreen.tsx'
+import { EditScreen } from './screens/editModel/EditScreen.tsx'
+import { RebindScreen } from './screens/editModel/RebindScreen.tsx'
 import { FinishScreen } from './screens/finish/FinishScreen.tsx'
 import { ModelsScreen } from './screens/models/ModelsScreen.tsx'
 import { ComingNextScreen } from './screens/placeholder/ComingNextScreen.tsx'
 import { RadioSetupScreen } from './screens/radioSetup/RadioSetupScreen.tsx'
 import { isReady, reducer, type AppState } from './state/appState.ts'
+import { partHasChanges } from './state/edit.ts'
 import { goTo, paths, redirectTo, useHashRoute } from './state/useHashRoute.ts'
 import { strings } from './strings/en.ts'
 
@@ -27,15 +31,13 @@ function App({ initialState }: { initialState: AppState }) {
 
   useEffect(() => () => window.clearTimeout(connectTimer.current), [])
 
-  // A new page starts at its top. This runs before any page's own scrolling, such as the list
-  // bringing a newly added row into view.
+  // A new page starts at its top, and keyboard and screen reader users start at the top of it
+  // too. Both happen before anything the page does for itself, so the list can still bring a newly
+  // added row into view, and a confirmation that has just appeared can still take the focus.
   useLayoutEffect(() => {
-    if (route !== firstRoute.current) document.documentElement.scrollTop = 0
-  }, [route])
-
-  // After moving to another page, start keyboard and screen reader users at the top of it.
-  useEffect(() => {
-    if (route !== firstRoute.current) main.current?.focus({ preventScroll: true })
+    if (route === firstRoute.current) return
+    document.documentElement.scrollTop = 0
+    main.current?.focus({ preventScroll: true })
   }, [route])
 
   function connect() {
@@ -68,8 +70,32 @@ function App({ initialState }: { initialState: AppState }) {
     goTo(paths.addStep('name'))
     dispatch({ type: 'wizardOpened', position })
   }
-  const modelToEdit =
-    route.name === 'editModel' ? state.models.find((model) => model.id === route.modelId) : undefined
+
+  // The Edit pages are all about one model: the page for the model, a page for one part of it,
+  // and the page that shows how to bind its receiver again.
+  const onEditPages = route.name === 'editModel' || route.name === 'editPart' || route.name === 'rebind'
+  const routeModel = ready && onEditPages ? state.models.find((model) => model.id === route.modelId) : undefined
+  const routePart = route.name === 'editPart' ? route.part : null
+
+  // The page for one part of a model, while it is open. If the address moves off it, by Cancel, a
+  // header link or the browser's Back, that is the person leaving. With changes not yet saved the
+  // page stays and asks first. With none, it just closes.
+  const edit = ready && !wizard ? state.edit : null
+  const editing = edit ? state.models.find((model) => model.id === edit.modelId) : undefined
+  const onEditsPage = edit !== null && routePart === edit.part && routeModel?.id === edit.modelId
+  const unsaved = edit !== null && editing !== undefined && partHasChanges(editing, edit.part, edit.draft)
+  const partShown = edit !== null && editing !== undefined && (onEditsPage || unsaved)
+
+  useEffect(() => {
+    if (edit && !partShown) dispatch({ type: 'editLeft' })
+  }, [edit, partShown])
+
+  // A part's page reached by its address alone, on a reload or by the browser's Forward, opens
+  // with the model's answers.
+  const partToOpen = !wizard && !edit && routePart && routeModel ? routeModel.id : null
+  useEffect(() => {
+    if (partToOpen && routePart) dispatch({ type: 'editOpened', modelId: partToOpen, part: routePart })
+  }, [partToOpen, routePart])
 
   let screen
   if (!ready && route.name === 'openFiles') {
@@ -107,12 +133,33 @@ function App({ initialState }: { initialState: AppState }) {
     screen = <BindScreen model={justAdded} />
   } else if (onWizardPage) {
     screen = null
-  } else if (modelToEdit) {
+  } else if (edit && editing && partShown) {
     screen = (
-      <ComingNextScreen
-        title={text.edit.title(modelToEdit.name)}
-        body={text.edit.body}
-        backLabel={text.backToModels}
+      <EditPartScreen
+        edit={edit}
+        model={editing}
+        isCurrent={state.currentModelId === editing.id}
+        models={state.models}
+        baseFitting={state.radio.baseFitting}
+        dispatch={dispatch}
+        leaving={!onEditsPage}
+        onKeepEditing={() => goTo(paths.editPart(editing.id, edit.part))}
+        onLeave={() => dispatch({ type: 'editLeft' })}
+      />
+    )
+  } else if (routeModel && route.name === 'editPart') {
+    // The part is about to open, in the effect above.
+    screen = null
+  } else if (routeModel && route.name === 'rebind') {
+    screen = <RebindScreen model={routeModel} />
+  } else if (routeModel) {
+    screen = (
+      <EditScreen
+        model={routeModel}
+        isCurrent={state.currentModelId === routeModel.id}
+        baseFitting={state.radio.baseFitting}
+        notice={state.notice}
+        dispatch={dispatch}
       />
     )
   } else if (route.name === 'finish') {

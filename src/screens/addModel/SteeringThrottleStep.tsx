@@ -2,9 +2,9 @@ import { useId, type ReactNode } from 'react'
 import { Pills } from '../../components/Pills.tsx'
 import { MT12, RECEIVER_PORTS } from '../../domain/catalog.ts'
 import type { ExtraAnswers } from '../../domain/extras.ts'
-import type { Direction } from '../../domain/model.ts'
+import type { Direction, ThrottleFeel } from '../../domain/model.ts'
 import type { PercentRange } from '../../domain/radio.ts'
-import { throttleFeelOf, type OfferedThrottleFeel } from '../../state/wizard.ts'
+import { throttleFeelOf } from '../../state/wizard.ts'
 import { strings } from '../../strings/en.ts'
 import { extraName } from './describe.ts'
 import type { StepProps } from './stepProps.ts'
@@ -14,17 +14,22 @@ import stepStyles from './steps.module.css'
 const text = strings.addModel.steeringThrottle
 
 const directions: readonly Direction[] = ['normal', 'reversed']
-const feels: readonly OfferedThrottleFeel[] = ['standard', 'gentle']
+const feels: readonly ThrottleFeel[] = ['standard', 'gentle']
+const feelWords: Record<ThrottleFeel, string> = { ...text.feels, custom: strings.editModel.customFeel }
 
 interface SettingProps {
   label: string
   help: string
+  /** A line about the answer that is picked, shown under the control. */
+  note?: string | null
+  /** True when the line says the answer will replace something, so it should not be missed. */
+  noteWarns?: boolean
   /** Gives the control, with the ids of the label and the help text so it can point at them. */
   children: (ids: { labelId: string; helpId: string }) => ReactNode
 }
 
 /** One setting: its name and a plain explanation on the left, the control on the right. */
-function Setting({ label, help, children }: SettingProps) {
+function Setting({ label, help, note, noteWarns, children }: SettingProps) {
   const labelId = useId()
   const helpId = useId()
   return (
@@ -37,7 +42,14 @@ function Setting({ label, help, children }: SettingProps) {
           {help}
         </p>
       </div>
-      <div className={styles.control}>{children({ labelId, helpId })}</div>
+      <div className={styles.control}>
+        {children({ labelId, helpId })}
+        {note !== undefined && (
+          <p className={styles.note} role="status" data-warns={noteWarns || undefined}>
+            {note}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
@@ -107,12 +119,21 @@ function PortPicker({ label, value, invalid, describedBy, extras, onChange }: Po
 }
 
 /** Step 3: how the vehicle steers and how the trigger drives it. */
-export function SteeringThrottleStep({ draft, view, problems, onChange, onViewChange }: StepProps) {
+export function SteeringThrottleStep({ draft, view, problems, editing, onChange, onViewChange }: StepProps) {
   const steeringId = useId()
   const throttleId = useId()
   const portsHelpId = useId()
   const portsProblemId = useId()
   const samePort = problems.ports !== null
+
+  // A feel made on the radio is offered as a third choice, already picked. The app cannot make
+  // one, so it is only there for a model that has one, and picking another replaces it.
+  const feel = throttleFeelOf(draft)
+  const hadCustomFeel = editing?.model.features.some((feature) => feature.kind === 'throttle' && feature.feel === 'custom')
+  let feelNote: string | null | undefined
+  if (hadCustomFeel) {
+    feelNote = feel === 'custom' ? strings.editModel.customFeelHelp : strings.editModel.customFeelReplaced
+  }
 
   return (
     <div className={stepStyles.step}>
@@ -154,13 +175,16 @@ export function SteeringThrottleStep({ draft, view, problems, onChange, onViewCh
             />
           )}
         </Setting>
-        <Setting label={text.feel} help={text.feelHelp}>
+        <Setting label={text.feel} help={text.feelHelp} note={feelNote} noteWarns={feel !== 'custom'}>
           {(ids) => (
             <Pills
               labelledBy={ids.labelId}
               describedBy={ids.helpId}
-              options={feels.map((value) => ({ value, label: text.feels[value] }))}
-              value={throttleFeelOf(draft)}
+              options={(hadCustomFeel ? [...feels, 'custom' as const] : feels).map((value) => ({
+                value,
+                label: feelWords[value],
+              }))}
+              value={feel}
               onChange={(throttleFeel) => onChange({ throttleFeel })}
             />
           )}

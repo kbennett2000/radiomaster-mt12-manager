@@ -126,7 +126,7 @@ function FeedbackRow({ extra, onChange }: RowProps) {
  * Step 5: how the radio tells the driver what is happening. Everything starts off, and the step
  * can be skipped.
  */
-export function FeedbackStep({ draft, onChange, onExtraChanged }: StepProps) {
+export function FeedbackStep({ draft, editing, onChange, onExtraChanged }: StepProps) {
   const modelColourId = useId()
   const modelColourHelpId = useId()
   const rows = draft.extras.filter(switches)
@@ -138,6 +138,11 @@ export function FeedbackStep({ draft, onChange, onExtraChanged }: StepProps) {
         <h2>{text.question}</h2>
         <p className={stepStyles.intro}>{text.help}</p>
       </div>
+
+      {/* Feedback set for the whole model can only be made on the radio. */}
+      {editing && editing.model.feedback.length > 0 && (
+        <p className={styles.clash}>{strings.editModel.leftAlone.feedbackAlso}</p>
+      )}
 
       <section className={styles.section}>
         <h3 id={modelColourId}>{text.modelColour}</h3>

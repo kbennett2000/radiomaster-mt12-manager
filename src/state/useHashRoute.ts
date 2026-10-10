@@ -3,6 +3,7 @@
 
 import { useMemo, useSyncExternalStore } from 'react'
 import type { ModelId } from '../domain/model.ts'
+import { EDIT_PARTS, type EditPart } from './edit.ts'
 import { BUILT_STEPS, type BuiltStepId } from './wizard.ts'
 
 export type Route =
@@ -11,6 +12,10 @@ export type Route =
   /** The wizard's last page, shown once the model has been added. */
   | { name: 'bind' }
   | { name: 'editModel'; modelId: ModelId }
+  /** One part of a model, on a page of its own. */
+  | { name: 'editPart'; modelId: ModelId; part: EditPart }
+  /** How to bind the receiver again, after a model's receiver was changed. */
+  | { name: 'rebind'; modelId: ModelId }
   | { name: 'radioSetup' }
   | { name: 'finish' }
   | { name: 'openFiles' }
@@ -31,6 +36,9 @@ export const paths = {
   addStep: (step: BuiltStepId) => `#/models/add/${stepSlugs[step]}`,
   bind: '#/models/add/bind',
   editModel: (modelId: ModelId) => `#/models/${encodeURIComponent(modelId)}/edit`,
+  /** Each part of a model has its own address too, so the browser's Back leaves it like any other page. */
+  editPart: (modelId: ModelId, part: EditPart) => `#/models/${encodeURIComponent(modelId)}/edit/${stepSlugs[part]}`,
+  rebind: (modelId: ModelId) => `#/models/${encodeURIComponent(modelId)}/bind`,
   radioSetup: '#/radio-setup',
   finish: '#/finish',
   openFiles: '#/open-files',
@@ -44,8 +52,14 @@ export function parseRoute(hash: string): Route {
   if (path === '/radio-setup') return { name: 'radioSetup' }
   if (path === '/finish') return { name: 'finish' }
   if (path === '/open-files') return { name: 'openFiles' }
-  const edit = /^\/models\/([^/]+)\/edit$/.exec(path)
-  if (edit) return { name: 'editModel', modelId: decodeURIComponent(edit[1]) }
+  const rebind = /^\/models\/([^/]+)\/bind$/.exec(path)
+  if (rebind) return { name: 'rebind', modelId: decodeURIComponent(rebind[1]) }
+  const edit = /^\/models\/([^/]+)\/edit(?:\/([^/]*))?$/.exec(path)
+  if (edit) {
+    const modelId = decodeURIComponent(edit[1])
+    const part = EDIT_PARTS.find((candidate) => stepSlugs[candidate] === edit[2])
+    return part ? { name: 'editPart', modelId, part } : { name: 'editModel', modelId }
+  }
   return { name: 'home' }
 }
 

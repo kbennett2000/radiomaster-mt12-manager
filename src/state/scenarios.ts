@@ -8,12 +8,13 @@ import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { ExtraFeedback, Model, ModelId } from '../domain/model.ts'
 import type { BaseFitting } from '../domain/radio.ts'
 import { initialState, reducer, type Action, type AppState } from './appState.ts'
+import type { EditPart } from './edit.ts'
 import { paths } from './useHashRoute.ts'
 import type { BuiltStepId, ModelDraft, WizardView } from './wizard.ts'
 
-export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'wizard' | 'finish'
+export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish'
 
-export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'wizard', 'finish']
+export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'wizard', 'edit', 'finish']
 
 export const SCENARIO_IDS = [
   'connect-first-visit',
@@ -36,7 +37,6 @@ export const SCENARIO_IDS = [
   'models-move',
   'models-moved',
   'models-dragged',
-  'models-edit-coming-next',
   'models-radio-setup',
   'delete-confirm',
   'delete-confirm-leave-empty',
@@ -79,6 +79,26 @@ export const SCENARIO_IDS = [
   'wizard-leave',
   'wizard-bind',
   'wizard-added',
+  'edit-micro-b',
+  'edit-trx4',
+  'edit-trx4-22',
+  'edit-airboat',
+  'edit-tarantula',
+  'edit-mini-8ight',
+  'edit-name',
+  'edit-receiver',
+  'edit-steering',
+  'edit-extras',
+  'edit-feedback',
+  'edit-extras-held',
+  'edit-receiver-changed',
+  'edit-steering-custom',
+  'edit-steering-custom-replaced',
+  'edit-name-problem',
+  'edit-leave',
+  'edit-saved',
+  'edit-saved-receiver',
+  'edit-bind',
   'finish-and-unplug',
   'finish-disconnected',
 ] as const
@@ -188,6 +208,35 @@ const onExtras = wizardOn('extras', withReceiver)
 const fullCrawler = folded(withExtras(onExtras, ...crawlerExtras, ['hornSound', { control: 'SD' }], aWinch))
 const fullCrawlerAdded = after(fullCrawler, { type: 'wizardStepShown', step: 'review' }, { type: 'wizardFinished' })
 
+/** The page for one part of a model, opened the way "Change" opens it, and then whatever is done on it. */
+const partOpen = (modelId: ModelId, part: EditPart, ...actions: Action[]): AppState =>
+  after(ready(), { type: 'editOpened', modelId, part }, ...actions)
+
+/** Picks an extra on a model's Extras page and answers its questions. It is left open. */
+const withExtraAdded = (state: AppState, [kind, answers = {}]: PickedExtra): AppState => {
+  const picked = reducer(state, { type: 'editExtraPicked', kind })
+  const id = picked.edit?.view.openExtraId
+  return id ? reducer(picked, { type: 'editExtraChanged', id, answers }) : picked
+}
+
+/** One scenario on a model's Edit page. */
+const editPage = (modelId: ModelId, state: AppState = ready()): Omit<Scenario, 'id'> => ({
+  group: 'edit',
+  path: paths.editModel(modelId),
+  state,
+})
+
+/** One scenario on the page for one part of a model. */
+const partPage = (modelId: ModelId, part: EditPart, state = partOpen(modelId, part)): Omit<Scenario, 'id'> => ({
+  group: 'edit',
+  path: paths.editPart(modelId, part),
+  state,
+})
+
+// TRX-4 with a different receiver picked, and then saved.
+const receiverPicked = partOpen('m03', 'receiver', { type: 'editChanged', draft: { receiverTypeId: 'spektrum-dsm2' } })
+const receiverSaved = after(receiverPicked, { type: 'editSaved' })
+
 const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
   'connect-browser-not-supported': { group: 'connect', path: paths.home, state: initialState(false) },
@@ -256,7 +305,6 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
     path: paths.home,
     state: after(ready(), { type: 'placeMoved', fromPosition: 20, toPosition: 2 }),
   },
-  'models-edit-coming-next': { group: 'models', path: paths.editModel('m03'), state: ready() },
   'models-radio-setup': {
     group: 'models',
     path: paths.radioSetup,
@@ -428,6 +476,44 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   // The same full crawler, just added. The wizard's last page shows first, then the list.
   'wizard-bind': { group: 'wizard', path: paths.bind, state: fullCrawlerAdded },
   'wizard-added': { group: 'wizard', path: paths.home, state: fullCrawlerAdded },
+
+  // Six sample models that between them have everything the Edit page can show. m11 is Micro B,
+  // m03 TRX-4, m06 TRX-4 2-2, m18 Airboat, m09 Tarantula, and m20 Mini 8ight, which the radio is set to.
+  'edit-micro-b': editPage('m11'),
+  'edit-trx4': editPage('m03'),
+  'edit-trx4-22': editPage('m06'),
+  'edit-airboat': editPage('m18'),
+  'edit-tarantula': editPage('m09'),
+  'edit-mini-8ight': editPage('m20'),
+  'edit-name': partPage('m03', 'name'),
+  'edit-receiver': partPage('m03', 'receiver'),
+  'edit-steering': partPage('m03', 'steeringThrottle'),
+  'edit-extras': partPage('m03', 'extras'),
+  'edit-feedback': partPage('m03', 'feedback'),
+  // Lights is being added to TRX-4 2-2. Its SD button is used by a preset made on the radio.
+  'edit-extras-held': partPage('m06', 'extras', withExtraAdded(partOpen('m06', 'extras'), ['lights'])),
+  'edit-receiver-changed': partPage('m03', 'receiver', receiverPicked),
+  // Tarantula has a throttle feel that was made on the radio.
+  'edit-steering-custom': partPage('m09', 'steeringThrottle'),
+  'edit-steering-custom-replaced': partPage(
+    'm09',
+    'steeringThrottle',
+    partOpen('m09', 'steeringThrottle', { type: 'editChanged', draft: { throttleFeel: 'standard' } }),
+  ),
+  // Summit is another model's name.
+  'edit-name-problem': partPage('m03', 'name', partOpen('m03', 'name', { type: 'editChanged', draft: { name: 'Summit' } })),
+  // The address has moved off the page while a change is not yet saved, which is what every way of leaving does.
+  'edit-leave': editPage('m03', partOpen('m03', 'name', { type: 'editChanged', draft: { name: 'TRX-4 Mud' } })),
+  // Horn sound was taken off TRX-4 and a winch was added, then saved.
+  'edit-saved': editPage(
+    'm03',
+    after(
+      withExtraAdded(after(partOpen('m03', 'extras'), { type: 'editExtraRemoved', id: 'hornSound' }), aWinch),
+      { type: 'editSaved' },
+    ),
+  ),
+  'edit-saved-receiver': editPage('m03', receiverSaved),
+  'edit-bind': { group: 'edit', path: paths.rebind('m03'), state: receiverSaved },
 
   'finish-and-unplug': { group: 'finish', path: paths.finish, state: ready() },
   'finish-disconnected': { group: 'finish', path: paths.home, state: after(ready(), { type: 'disconnected' }) },

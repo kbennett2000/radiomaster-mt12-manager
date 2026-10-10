@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { Button } from '../../components/Button.tsx'
 import { CheckIcon } from '../../components/icons.tsx'
 import { RECEIVER_TYPES, type BrandId } from '../../domain/catalog.ts'
@@ -14,10 +14,22 @@ const text = strings.addModel.receiver
 const brands = [...new Set(RECEIVER_TYPES.map((receiver) => receiver.brand))] as BrandId[]
 
 /** Step 2: which receiver is in the vehicle, found by searching or by reading down the list. */
-export function ReceiverStep({ draft, view, problems, tried, onChange, onViewChange }: StepProps) {
+export function ReceiverStep({ draft, view, problems, tried, editing, onChange, onViewChange }: StepProps) {
   const searchId = useId()
   const groupName = useId()
   const panelId = useId()
+  const list = useRef<HTMLFieldSetElement>(null)
+
+  // A model that is being edited already has a receiver, and it may sit below the edge of the
+  // list's frame. Once, as the page opens, the list is scrolled so that its brand is at the top
+  // of the frame. Only the list scrolls, never the page.
+  const editingId = editing?.model.id
+  useEffect(() => {
+    const frame = list.current
+    const brand = frame?.querySelector('input:checked')?.closest('[role="group"]')
+    if (!editingId || !frame || !brand) return
+    frame.scrollTop += brand.getBoundingClientRect().top - frame.getBoundingClientRect().top - frame.clientTop
+  }, [editingId])
 
   const matching = RECEIVER_TYPES.filter((receiver) =>
     matchesSearch(view.search, [
@@ -63,7 +75,7 @@ export function ReceiverStep({ draft, view, problems, tried, onChange, onViewCha
           )}
         </div>
 
-        <fieldset className={styles.list}>
+        <fieldset ref={list} className={styles.list}>
           <legend className="visually-hidden">{text.listLabel}</legend>
           {matching.length === 0 && <p className={styles.nothing}>{text.nothingMatches(view.search.trim())}</p>}
           {brands.map((brand) => {
@@ -97,6 +109,10 @@ export function ReceiverStep({ draft, view, problems, tried, onChange, onViewCha
 
         <p className={stepStyles.problem} role="alert">
           {tried && problems.receiver ? text.missing : null}
+        </p>
+        {/* A model that changes to a different receiver has to be introduced to it. */}
+        <p className={styles.bindAgain} role="status">
+          {editing && draft.receiverTypeId !== editing.model.receiverTypeId ? strings.editModel.bindAgainWarning : null}
         </p>
       </div>
 

@@ -178,3 +178,8 @@
 .unfinished {
   color: var(--color-text-muted);
 }
+
+/* Settings made on the radio, named quietly under the list. */
+.alsoOnModel {
+  color: var(--color-text-muted);
+}
