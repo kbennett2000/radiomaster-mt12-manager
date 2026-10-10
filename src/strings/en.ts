@@ -7,7 +7,14 @@
 import { APP_NAME } from '../config/app.ts'
 import type { BrandId, LightColour, ReceiverTypeId } from '../domain/catalog.ts'
 import type { ExtraKind, ExtraProblem } from '../domain/extras.ts'
-import type { CustomWorks, Direction, FeedbackKind, FeedbackSound, SwitchPosition } from '../domain/model.ts'
+import type {
+  CustomWorks,
+  Direction,
+  ExtraState,
+  FeedbackKind,
+  FeedbackSound,
+  SwitchPosition,
+} from '../domain/model.ts'
 import type { WhenDeleting } from '../domain/positions.ts'
 import type { BaseFitting, ControlId, ControlKind } from '../domain/radio.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
@@ -35,6 +42,16 @@ const goesBackwards = (kind: VehicleKind | null): string => {
 
 /** Where a switch is, as the end of a sentence: "when the switch is up". */
 const switchIs: Record<SwitchPosition, string> = { up: 'up', middle: 'in the middle', down: 'down' }
+
+// When a light colour shows, for an extra with a colour for each state: "blue light in low gear".
+const lightIsOn: Record<Exclude<ExtraState, 'on'>, string> = {
+  low: 'in low gear',
+  high: 'in high gear',
+  neutral: 'in neutral',
+  up: 'when up',
+  middle: 'in the middle',
+  down: 'when down',
+}
 
 export const strings = {
   appName: APP_NAME,
@@ -553,12 +570,23 @@ export const strings = {
       vibration: 'Vibration',
       vibrationOff: 'Off',
       vibrationOn: 'On',
-      colourWhileOn: 'Light colour while it is on',
+      // One colour for each state an extra can be in. Most extras are only on or off.
+      colourFor: {
+        on: 'Light colour while it is on',
+        low: 'Light colour in low gear',
+        high: 'Light colour in high gear',
+        neutral: 'Light colour in neutral',
+        up: 'Light colour when up',
+        middle: 'Light colour in the middle',
+        down: 'Light colour when down',
+      } satisfies Record<ExtraState, string>,
+      // Marks a colour most people will leave alone.
+      optional: 'optional',
       none: 'None',
       // A setting named in full for screen readers, such as "Sound for Lights".
       settingFor: (setting: string, extra: string) => `${setting} for ${extra}`,
       says: (words: readonly string[]) => `It will say ${listOf(words.map((word) => `“${word}”`))}.`,
-      clash: 'If two of these are on at once, the one lower in this list sets the light colour.',
+      clash: 'If two of these would set the light colour at once, the one lower in this list wins.',
       // What Voice would say as each extra switches. Placeholder words: the sound files that say
       // them are not made yet, and will have to be put on the radio's SD card.
       voice: {
@@ -625,7 +653,9 @@ export const strings = {
       extraFeedback: (extra: string, what: string) => `${extra}: ${what}`,
       feedbackSound: { beep: 'beep', voice: 'voice' } satisfies Record<Exclude<FeedbackSound, 'off'>, string>,
       feedbackVibration: 'vibration',
-      feedbackColour: (colour: string) => `${colour.toLowerCase()} light`,
+      // "blue light", or for an extra with a colour for each state, "blue light in low gear".
+      feedbackColour: (colour: string, state: ExtraState) =>
+        state === 'on' ? `${colour.toLowerCase()} light` : `${colour.toLowerCase()} light ${lightIsOn[state]}`,
       afterThis: 'After this, the last step shows you how to bind your receiver.',
       confirm: 'Add to my radio',
     },
@@ -800,10 +830,14 @@ export const strings = {
       'wizard-extras-missing': 'Step 4: a missing answer',
       'wizard-extras-winch': 'Step 4: “Something else” as a winch',
       'wizard-extras-gyro-hint': 'Step 4: gyro gain, with the port 8 hint',
+      'wizard-extras-boat': 'Step 4: for a boat, with no diff locks',
       'wizard-feedback-none': 'Step 5: nothing that switches',
       'wizard-feedback-rows': 'Step 5: several rows',
       'wizard-feedback-voice': 'Step 5: Voice picked',
       'wizard-feedback-clash': 'Step 5: a colour clash explained',
+      'wizard-feedback-gears-switch': 'Step 5: 2-speed on SA, three colours',
+      'wizard-feedback-gears-button': 'Step 5: 2-speed on a push button, two colours',
+      'wizard-feedback-three-positions': 'Step 5: a three-position extra, with colours',
       'wizard-review': 'Review: no extras',
       'wizard-review-crawler': 'Review: a full crawler',
       'wizard-leave': 'The leave question',

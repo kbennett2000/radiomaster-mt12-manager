@@ -30,7 +30,7 @@
   font-size: var(--text-large);
 }
 
-/* The three settings side by side, each under its own label. */
+/* A line of settings side by side, each under its own label. */
 .settings {
   display: flex;
   flex-wrap: wrap;
@@ -45,6 +45,14 @@
 
 .settingLabel {
   color: var(--color-text-muted);
+}
+
+/* The quiet mark beside a colour most people will leave alone. */
+.optional {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
 }
 
 .colourPicker {

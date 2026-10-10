@@ -5,7 +5,6 @@ import { PlusIcon } from '../../components/icons.tsx'
 import { controlKind, gyroGainPortFor } from '../../domain/catalog.ts'
 import {
   controlChoices,
-  EXTRA_KINDS,
   EXTRAS,
   MAX_EXTRA_NAME_LENGTH,
   portChoices,
@@ -19,7 +18,7 @@ import {
   type PortUser,
 } from '../../domain/extras.ts'
 import type { CustomWorks, SwitchPosition } from '../../domain/model.ts'
-import { basicPortsOf, COMMON_ON_CRAWLERS } from '../../state/wizard.ts'
+import { basicPortsOf, COMMON_ON_CRAWLERS, extraKindsFor } from '../../state/wizard.ts'
 import { strings } from '../../strings/en.ts'
 import { extraName, howExtraWorks } from './describe.ts'
 import styles from './ExtrasStep.module.css'
@@ -349,7 +348,9 @@ export function ExtrasStep({
       </div>
 
       <ul className={styles.list}>
-        {EXTRA_KINDS.filter((kind) => kind !== 'customExtra').map(item)}
+        {extraKindsFor(draft.vehicleKind)
+          .filter((kind) => kind !== 'customExtra')
+          .map(item)}
 
         {/* "Something else" can be added more than once, so each one gets a line of its own. */}
         {customs.map((extra) => (

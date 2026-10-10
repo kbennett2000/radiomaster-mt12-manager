@@ -32,6 +32,9 @@ test('Review sums up the answers, says what each control and port does, and adds
 
   // The feedback given on step 5 is summed up too.
   expect(main.getByText(text.modelColour(strings.addModel.feedback.colours.green))).toBeTruthy()
+  // An extra with a colour for each state names every one that is set.
+  expect(main.getByText('2-speed transmission: voice, blue light in low gear and green light in high gear')).toBeTruthy()
+  expect(main.getByText('Winch: beep, red light when up and blue light when down')).toBeTruthy()
   expect(main.getByText(text.afterThis)).toBeTruthy()
 
   fireEvent.click(main.getByRole('button', { name: text.confirm }))

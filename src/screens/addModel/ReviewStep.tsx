@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { switches, type ExtraAnswers } from '../../domain/extras.ts'
-import { givesFeedback } from '../../domain/feedback.ts'
+import { colourStatesOf, switches, type ExtraAnswers } from '../../domain/extras.ts'
+import { coloursIn, givesFeedback } from '../../domain/feedback.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { modelFrom, throttleFeelOf, type BuiltStepId } from '../../state/wizard.ts'
 import { listOf, strings } from '../../strings/en.ts'
@@ -15,17 +15,19 @@ interface RowProps {
   label: string
   /** The step where this answer can be changed. Left out for the position, which no step sets. */
   changeOn?: BuiltStepId
+  /** Something to get ready on that step before it shows, such as which extra is open. */
+  onChange?: () => void
   children: ReactNode
 }
 
-function Row({ label, changeOn, children }: RowProps) {
+function Row({ label, changeOn, onChange, children }: RowProps) {
   return (
     <div className={styles.row}>
       <dt className={styles.label}>{label}</dt>
       <dd className={styles.answer}>{children}</dd>
       <dd className={styles.change}>
         {changeOn && (
-          <a href={paths.addStep(changeOn)} aria-label={text.changeNamed(label)}>
+          <a href={paths.addStep(changeOn)} aria-label={text.changeNamed(label)} onClick={onChange}>
             {text.change}
           </a>
         )}
@@ -34,13 +36,18 @@ function Row({ label, changeOn, children }: RowProps) {
   )
 }
 
-/** One extra's feedback in a few words, such as "Lights: beep, vibration and blue light". */
+/**
+ * One extra's feedback in a few words, such as "Lights: beep, vibration and blue light". An extra
+ * with a colour for each state names each one: "blue light in low gear and green light in high gear".
+ */
 function feedbackWords(extra: ExtraAnswers): string {
-  const { sound, vibration, lightColour } = extra.feedback
+  const { sound, vibration } = extra.feedback
   const parts = [
     sound === 'off' ? null : text.feedbackSound[sound],
     vibration ? text.feedbackVibration : null,
-    lightColour ? text.feedbackColour(strings.addModel.feedback.colours[lightColour]) : null,
+    ...coloursIn(extra.feedback, colourStatesOf(extra)).map(({ state, colour }) =>
+      text.feedbackColour(strings.addModel.feedback.colours[colour], state),
+    ),
   ].filter((part) => part !== null)
   return text.extraFeedback(extraName(extra), listOf(parts))
 }
@@ -50,7 +57,7 @@ function feedbackWords(extra: ExtraAnswers): string {
  * the answers round two ways: what each control on the radio does, and what plugs into each
  * receiver port.
  */
-export function ReviewStep({ draft, baseFitting }: StepProps) {
+export function ReviewStep({ draft, baseFitting, onViewChange }: StepProps) {
   // The same model "Add to my radio" will add, built here only to describe it.
   const features = modelFrom(draft, 'review', draft.position)?.features ?? []
   const withFeedback = draft.extras.filter((extra) => switches(extra) && givesFeedback(extra.feedback))
@@ -76,12 +83,18 @@ export function ReviewStep({ draft, baseFitting }: StepProps) {
           <span>{text.topSpeed(draft.topSpeed)}</span>
         </Row>
         {draft.extras.length === 0 && (
-          <Row label={text.extrasLabel} changeOn="extras">
+          <Row label={text.extrasLabel} changeOn="extras" onChange={() => onViewChange({ openExtraId: null })}>
             {text.extrasNone}
           </Row>
         )}
+        {/* "Change" beside an extra opens step 4 with that extra's questions showing, not folded. */}
         {draft.extras.map((extra) => (
-          <Row key={extra.id} label={extraName(extra)} changeOn="extras">
+          <Row
+            key={extra.id}
+            label={extraName(extra)}
+            changeOn="extras"
+            onChange={() => onViewChange({ openExtraId: extra.id })}
+          >
             {extra.control && <span>{strings.controls[extra.control]}</span>}
             {extra.speedControl && <span>{strings.controls[extra.speedControl]}</span>}
             {extra.port !== null && <span>{text.port(extra.port)}</span>}
