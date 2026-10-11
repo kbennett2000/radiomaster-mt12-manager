@@ -30,9 +30,15 @@ export function byPath<Item extends { path: string }>(first: Item, second: Item)
 /** How many places the radio has for models. */
 export const PLACES = MT12.maxModels
 
-const MODELS = 'MODELS'
-const RADIO = 'RADIO'
-const DELETED = `${MODELS}/DELETED`
+/** The folders the app looks in, named exactly as the radio writes them. */
+export const MODELS_FOLDER = 'MODELS'
+export const RADIO_FOLDER = 'RADIO'
+/** The folder inside MODELS where the app keeps deleted models. */
+export const DELETED_FOLDER = 'DELETED'
+
+const MODELS = MODELS_FOLDER
+const RADIO = RADIO_FOLDER
+const DELETED = `${MODELS}/${DELETED_FOLDER}`
 export const RADIO_SETTINGS_PATH = `${RADIO}/radio.yml`
 
 const MODEL_FILE = /^MODELS\/model(\d\d)\.yml$/

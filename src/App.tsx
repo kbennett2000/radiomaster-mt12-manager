@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
 import styles from './App.module.css'
 import { Header } from './components/Header.tsx'
 import { MT12 } from './domain/catalog.ts'
+import { pickFolderToRead } from './platform/pickFolder.ts'
+import { readRadioFolder, type FolderToRead } from './platform/radioFolder.ts'
 import { ReviewerPanel } from './review/ReviewerPanel.tsx'
 import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from './sample/sampleModels.ts'
 import { AddModelScreen } from './screens/addModel/AddModelScreen.tsx'
@@ -11,25 +13,30 @@ import { EditPartScreen } from './screens/editModel/EditPartScreen.tsx'
 import { EditScreen } from './screens/editModel/EditScreen.tsx'
 import { RebindScreen } from './screens/editModel/RebindScreen.tsx'
 import { FinishScreen } from './screens/finish/FinishScreen.tsx'
+import { CardModelsScreen } from './screens/models/CardModelsScreen.tsx'
 import { ModelsScreen } from './screens/models/ModelsScreen.tsx'
 import { ComingNextScreen } from './screens/placeholder/ComingNextScreen.tsx'
 import { RadioSetupScreen } from './screens/radioSetup/RadioSetupScreen.tsx'
-import { isReady, reducer, type AppState } from './state/appState.ts'
+import { isReady, modelCountOf, reducer, type AppState } from './state/appState.ts'
 import { partHasChanges } from './state/edit.ts'
 import { goTo, paths, redirectTo, useHashRoute } from './state/useHashRoute.ts'
 import { strings } from './strings/en.ts'
 
-// Connect is simulated in this cycle: after a short pause it succeeds and loads the sample data.
-const SIMULATED_CONNECT_MS = 1200
+interface AppProps {
+  initialState: AppState
+  /**
+   * For reviewers only: gives a folder to open as soon as the app starts, as if the person had
+   * just picked it. It is how a made-up card is looked at without the folder picker.
+   */
+  openAtStart?: () => Promise<FolderToRead>
+}
 
-function App({ initialState }: { initialState: AppState }) {
+function App({ initialState, openAtStart }: AppProps) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const route = useHashRoute()
   const main = useRef<HTMLElement>(null)
-  const connectTimer = useRef<number | undefined>(undefined)
   const firstRoute = useRef(route)
-
-  useEffect(() => () => window.clearTimeout(connectTimer.current), [])
+  const [openingAtStart, setOpeningAtStart] = useState(openAtStart !== undefined)
 
   // A new page starts at its top, and keyboard and screen reader users start at the top of it
   // too. Both happen before anything the page does for itself, so the list can still bring a newly
@@ -40,14 +47,50 @@ function App({ initialState }: { initialState: AppState }) {
     main.current?.focus({ preventScroll: true })
   }, [route])
 
-  function connect() {
+  // Reads a folder as the radio's card. A folder the person picked and a reviewer's made-up one
+  // both come through here, and through nothing else. This version only reads the card.
+  const openFolder = useCallback(async (folder: FolderToRead) => {
+    const read = await readRadioFolder(folder)
+    dispatch(read.ok ? { type: 'cardConnected', reading: read.reading } : { type: 'wrongFolderPicked' })
+  }, [])
+
+  // Connect: the browser's own folder picker, asked to read and nothing more. If it is closed
+  // without a folder being chosen, the page goes back to how it was and says nothing.
+  async function connect() {
     dispatch({ type: 'connectStarted' })
-    connectTimer.current = window.setTimeout(() => {
-      dispatch({ type: 'connectSucceeded', models: SAMPLE_MODELS, currentModelId: SAMPLE_CURRENT_MODEL_ID })
-    }, SIMULATED_CONNECT_MS)
+    const folder = await pickFolderToRead()
+    if (folder) await openFolder(folder)
+    else dispatch({ type: 'connectCancelled' })
   }
 
+  // The app as it works on sample models, for someone with no radio to hand.
+  function trySample() {
+    dispatch({ type: 'connectSucceeded', models: SAMPLE_MODELS, currentModelId: SAMPLE_CURRENT_MODEL_ID })
+  }
+
+  // A reviewer's made-up card is opened once, when the app starts. While that is going on the
+  // page says so on <main>, which is what the picture script waits for.
+  useEffect(() => {
+    if (!openAtStart) return
+    let left = false
+    dispatch({ type: 'connectStarted' })
+    openAtStart()
+      .then((folder) => (left ? undefined : openFolder(folder)))
+      .catch((error: unknown) => {
+        console.error(error)
+        if (!left) dispatch({ type: 'connectCancelled' })
+      })
+      .finally(() => {
+        if (!left) setOpeningAtStart(false)
+      })
+    return () => {
+      left = true
+    }
+  }, [openAtStart, openFolder])
+
   const ready = isReady(state)
+  // What was read from a real card, once the app is ready to show it. Null for the sample models.
+  const card = ready ? state.card : null
   const text = strings.comingNext
   const wizard = ready ? state.wizard : null
   const onWizardPage = route.name === 'addModel' || route.name === 'bind'
@@ -106,7 +149,8 @@ function App({ initialState }: { initialState: AppState }) {
     screen = (
       <ConnectScreen
         state={state}
-        onConnect={connect}
+        onConnect={() => void connect()}
+        onTrySample={trySample}
         onBaseFittingAnswered={(baseFitting) => dispatch({ type: 'baseFittingAnswered', baseFitting })}
       />
     )
@@ -182,6 +226,14 @@ function App({ initialState }: { initialState: AppState }) {
         }}
       />
     )
+  } else if (card) {
+    screen = (
+      <CardModelsScreen
+        reading={card}
+        notice={state.notice}
+        onNoticeDismissed={() => dispatch({ type: 'noticeDismissed' })}
+      />
+    )
   } else {
     screen = <ModelsScreen state={state} dispatch={dispatch} onAdd={startWizard} />
   }
@@ -191,8 +243,12 @@ function App({ initialState }: { initialState: AppState }) {
       <button type="button" className={styles.skip} onClick={() => main.current?.focus()}>
         {strings.skipToContent}
       </button>
-      <Header connected={ready ? { modelCount: state.models.length, maxModels: MT12.maxModels } : undefined} />
-      <main ref={main} className={styles.main} tabIndex={-1}>
+      <Header
+        connected={
+          ready ? { modelCount: modelCountOf(state), maxModels: MT12.maxModels, sample: state.card === null } : undefined
+        }
+      />
+      <main ref={main} className={styles.main} tabIndex={-1} data-opening-card={openingAtStart || undefined}>
         {screen}
       </main>
       <ReviewerPanel />

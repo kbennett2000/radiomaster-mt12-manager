@@ -20,5 +20,5 @@ test('Your models lists the 20 sample models in position order and marks the cur
   expect(main.getAllByText(strings.models.currentMark)).toHaveLength(1)
   expect(main.getByText(strings.models.emptyAfter(21, MT12.maxModels))).toBeTruthy()
   expect(main.getByRole('link', { name: strings.models.addModel })).toBeTruthy()
-  expect(screen.getByText(strings.header.connected(20, MT12.maxModels))).toBeTruthy()
+  expect(screen.getByText(strings.header.sample(20, MT12.maxModels))).toBeTruthy()
 })

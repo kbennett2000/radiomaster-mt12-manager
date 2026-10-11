@@ -18,7 +18,7 @@ test('The Bind page shows four steps that name the model, which is already in th
   expect(main.getByText(text.added('Bouncer', 21))).toBeTruthy()
 
   // The model is already on the radio: the header counts it.
-  expect(screen.getByText(strings.header.connected(21, MT12.maxModels))).toBeTruthy()
+  expect(screen.getByText(strings.header.sample(21, MT12.maxModels))).toBeTruthy()
 
   expect(main.getByRole('link', { name: text.backToModels })).toBeTruthy()
   expect(main.getByRole('link', { name: text.finishAndUnplug })).toBeTruthy()

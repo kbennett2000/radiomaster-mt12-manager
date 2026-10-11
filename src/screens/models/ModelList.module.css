@@ -186,6 +186,11 @@
   padding: 0;
 }
 
+/* A real card's row has no actions, so its receiver type takes their room too and keeps its place. */
+.receiverAlone {
+  width: calc(var(--row-receiver-width) + var(--space-2) + var(--row-actions-width));
+}
+
 .actions {
   display: flex;
   flex: none;
@@ -244,6 +249,16 @@
 
 .emptyName {
   color: var(--color-text-muted);
+}
+
+/*
+ * A real card's row for a file that could not be read. There is no name and no receiver type to
+ * line up, so the words take the rest of the row, and run on to a second line when they need it.
+ */
+.unread {
+  grid-column: 2 / -1;
+  padding: calc((var(--row-line-height) - var(--line-body-height)) / 2) 0;
+  line-height: var(--line-body);
 }
 
 .emptyActions {

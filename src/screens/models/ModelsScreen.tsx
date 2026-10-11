@@ -24,6 +24,7 @@ import { ModelList } from './ModelList.tsx'
 import styles from './ModelsScreen.module.css'
 import { MoveDialog } from './MoveDialog.tsx'
 import { RadioFullDialog } from './RadioFullDialog.tsx'
+import { RadioSetupNotice } from './RadioSetupNotice.tsx'
 import { RecentlyDeleted } from './RecentlyDeleted.tsx'
 
 interface ModelsScreenProps {
@@ -121,11 +122,7 @@ function ChangeNotice({ state, dispatch }: ScreenParts) {
   }
 
   if (notice.kind === 'radioSetupSaved') {
-    return (
-      <Notice title={strings.notice.radioSetupTitle} actions={dismiss} announceKey={notice}>
-        {strings.notice.radioSetupBody}
-      </Notice>
-    )
+    return <RadioSetupNotice announceKey={notice} onDismiss={() => dispatch({ type: 'noticeDismissed' })} />
   }
 
   return (

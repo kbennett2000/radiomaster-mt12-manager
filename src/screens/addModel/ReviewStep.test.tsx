@@ -41,5 +41,5 @@ test('Review sums up the answers, says what each control and port does, and adds
 
   // The model is added, and the wizard's last page shows how to bind the receiver.
   expect(main.getByRole('heading', { level: 2, name: strings.addModel.bind.title })).toBeTruthy()
-  expect(screen.getByText(strings.header.connected(21, MT12.maxModels))).toBeTruthy()
+  expect(screen.getByText(strings.header.sample(21, MT12.maxModels))).toBeTruthy()
 })

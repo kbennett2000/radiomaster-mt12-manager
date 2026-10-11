@@ -70,6 +70,8 @@ export const strings = {
 
   header: {
     connected: (count: number, max: number) => `Connected to your ${RADIO_NAME} · ${count} of ${max} models`,
+    // What the header says in place of "Connected to your MT12" while the sample models are shown.
+    sample: (count: number, max: number) => `Sample models · ${count} of ${max} models`,
     radioSetup: 'Radio setup',
     finishAndUnplug: 'Finish and unplug',
   },
@@ -96,6 +98,7 @@ export const strings = {
     radioMenuChoice: 'USB Storage (SD)',
     connectButton: 'Connect',
     openFilesLink: 'Open files instead',
+    sampleLink: 'Try it with sample models',
     disconnected: 'Your radio is disconnected. Connect it again whenever you like.',
     connecting: {
       button: 'Connecting…',
@@ -103,7 +106,7 @@ export const strings = {
     },
     wrongFolder: {
       title: 'No models were found there',
-      body: 'The folder you picked doesn’t look like your radio. Your radio’s drive has folders called MODELS and RADIO in it. Pick the drive itself, not a folder inside it.',
+      body: 'The folder you picked doesn’t look like your radio. Pick the top folder of your radio’s drive, the one with MODELS and RADIO inside.',
       retry: 'Try again',
     },
     unsupported: {
@@ -198,6 +201,26 @@ export const strings = {
     },
     fullBanner: (max: number) =>
       `Your radio is full. It holds ${max} models. To add or copy one, first delete a model you no longer need.`,
+  },
+
+  // "Your models" for a real card. This version only reads a card, so nothing here offers a change.
+  card: {
+    readOnly: 'This version only reads your card. Changing it comes next.',
+    receiverNotKnown: 'A receiver type this app does not know yet',
+    noName: 'No name',
+    // A model whose file the reader refused. The reader's own message for the line follows it.
+    fileNotRead: 'This model’s file could not be read.',
+    // A file that reads line by line, but has no model's name in it.
+    notAModel: 'It is not written the way your radio writes a model.',
+    // The strip, when the radio's model has no name the app could read.
+    currentUnnamed: (position: number) => `Your radio is set to the model in position ${position}.`,
+    currentEmpty: (position: number) => `Your radio is set to position ${position}, which is empty.`,
+    // One plain line above the list for each thing wrong with the radio's settings file.
+    settingsNotRead: (why: string) => `Your radio’s settings file could not be read. ${why}`,
+    settingsCheckWrong:
+      'The check number on the first line of your radio’s settings file does not match the rest of the file.',
+    settingsCheckMissing: 'Your radio’s settings file has no check number on its first line.',
+    settingsNameNoModel: 'Your radio’s settings file does not say which model your radio is set to.',
   },
 
   // What a model has, shown as short tags on its row. Steering and throttle are never tags,
@@ -880,7 +903,7 @@ export const strings = {
     eyebrow: 'Coming next',
     openFiles: {
       title: 'Opening files yourself is coming next',
-      body: `${comingNextBody} For now, click Connect to try the app with sample models.`,
+      body: `${comingNextBody} For now, you can try the app with sample models from the Connect page.`,
     },
     backToConnect: 'Back to Connect',
   },
@@ -891,6 +914,7 @@ export const strings = {
     startOver: 'Start from the beginning',
     groups: {
       connect: 'Connect',
+      realCard: 'Real card',
       models: 'Your models',
       delete: 'Delete',
       wizard: 'Add a model',
@@ -904,6 +928,15 @@ export const strings = {
       'connect-wrong-folder': 'Wrong folder picked',
       'connect-connected-first-time': 'Connected, first time: what is on the base?',
       'connect-open-files-coming-next': 'Open files instead (coming next)',
+      // Kept short: this group shares the panel's first column with two others.
+      'card-made-up': 'The made-up card',
+      'card-20-models': '20 models, radio on 20',
+      'card-empty-place': 'An empty place',
+      'card-unknown-receiver': 'Unknown receiver type',
+      'card-unreadable-model': 'Unreadable model file',
+      'card-wrong-checksum': 'Wrong checksum',
+      'card-no-models-folder': 'No MODELS folder',
+      'card-connect-page': 'Connect, the new link',
       'models-20': 'The list with 20 models',
       'models-gaps': 'The list with empty places, and “Close up empty places”',
       'models-closed-up': 'After closing up empty places',

@@ -12,9 +12,31 @@ import type { EditPart } from './edit.ts'
 import { paths } from './useHashRoute.ts'
 import type { BuiltStepId, ModelDraft, WizardView } from './wizard.ts'
 
-export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish'
+export type ScenarioGroup = 'connect' | 'realCard' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish'
 
-export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'wizard', 'edit', 'finish']
+export const SCENARIO_GROUPS: readonly ScenarioGroup[] = [
+  'connect',
+  'realCard',
+  'models',
+  'delete',
+  'wizard',
+  'edit',
+  'finish',
+]
+
+/**
+ * The made-up cards a reviewer can open. Each is written into the browser's own private storage
+ * and then read from there by the same code that reads a folder the person picked.
+ * See src/review/reviewCards.ts.
+ */
+export type ReviewCard =
+  | 'madeUp'
+  | 'twentyModels'
+  | 'emptyPlace'
+  | 'unknownReceiver'
+  | 'unreadableModel'
+  | 'wrongChecksum'
+  | 'noModelsFolder'
 
 export const SCENARIO_IDS = [
   'connect-first-visit',
@@ -23,6 +45,14 @@ export const SCENARIO_IDS = [
   'connect-wrong-folder',
   'connect-connected-first-time',
   'connect-open-files-coming-next',
+  'card-made-up',
+  'card-20-models',
+  'card-empty-place',
+  'card-unknown-receiver',
+  'card-unreadable-model',
+  'card-wrong-checksum',
+  'card-no-models-folder',
+  'card-connect-page',
   'models-20',
   'models-gaps',
   'models-closed-up',
@@ -110,12 +140,25 @@ export interface Scenario {
   group: ScenarioGroup
   /** The page the scenario opens on. */
   path: string
+  /** The state the app starts in. */
   state: AppState
+  /** A made-up card the app opens as soon as it starts, as if its folder had just been picked. */
+  card?: ReviewCard
 }
 
 const after = (state: AppState, ...actions: Action[]): AppState => actions.reduce(reducer, state)
 
 const notConnected = initialState(true)
+
+/** Before a real card is opened, with the question about the base already answered, so the card's list is what shows. */
+const aboutToOpenCard = after(notConnected, { type: 'baseFittingAnswered', baseFitting: 'blankCover' })
+
+const realCard = (card: ReviewCard): Omit<Scenario, 'id'> => ({
+  group: 'realCard',
+  path: paths.home,
+  state: aboutToOpenCard,
+  card,
+})
 
 const justConnected = (models: readonly Model[], currentModelId: ModelId | null): AppState =>
   after(notConnected, { type: 'connectSucceeded', models, currentModelId })
@@ -241,14 +284,22 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
   'connect-browser-not-supported': { group: 'connect', path: paths.home, state: initialState(false) },
   'connect-connecting': { group: 'connect', path: paths.home, state: after(notConnected, { type: 'connectStarted' }) },
-  // The simulated Connect always succeeds, so no click leads here. The state is set directly.
-  'connect-wrong-folder': { group: 'connect', path: paths.home, state: { ...notConnected, connection: 'wrongFolder' } },
+  'connect-wrong-folder': { group: 'connect', path: paths.home, state: after(notConnected, { type: 'wrongFolderPicked' }) },
   'connect-connected-first-time': {
     group: 'connect',
     path: paths.home,
     state: justConnected(SAMPLE_MODELS, SAMPLE_CURRENT_MODEL_ID),
   },
   'connect-open-files-coming-next': { group: 'connect', path: paths.openFiles, state: notConnected },
+
+  'card-made-up': realCard('madeUp'),
+  'card-20-models': realCard('twentyModels'),
+  'card-empty-place': realCard('emptyPlace'),
+  'card-unknown-receiver': realCard('unknownReceiver'),
+  'card-unreadable-model': realCard('unreadableModel'),
+  'card-wrong-checksum': realCard('wrongChecksum'),
+  'card-no-models-folder': realCard('noModelsFolder'),
+  'card-connect-page': { group: 'realCard', path: paths.home, state: notConnected },
 
   'models-20': { group: 'models', path: paths.home, state: ready() },
   'models-gaps': { group: 'models', path: paths.home, state: arrivedWithGaps },
