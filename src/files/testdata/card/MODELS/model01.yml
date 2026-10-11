@@ -1,0 +1,34 @@
+semver: 2.10.0
+header: 
+   name: "Gravel Cat"
+telemetryProtocol: 0
+trimInc: 0
+hatsMode: GLOBAL
+mixData: 
+ -
+   weight: 90
+   destCh: 0
+   srcRaw: I0
+   mltpx: ADD
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+limitData: 
+   0:
+      min: 55
+      max: -55
+      revert: 0
+      name: "STR"
+inputNames: 
+   0:
+      val: "ST"
+thrTraceSrc: TH
+switchWarningState: 
+moduleData: 
+   0:
+      type: TYPE_MULTIMODULE
+      subType: 6,5
+      channelsStart: 0
+      channelsCount: 8
+view: 0
+modelRegistrationID: ""

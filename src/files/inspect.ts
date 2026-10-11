@@ -4,6 +4,7 @@
 
 import { receiverTypeForNumbers } from '../domain/catalog.ts'
 import { strings } from '../strings/en.ts'
+import { RADIO_SETTINGS_PATH, readCard, type Card, type CardModel, type DeletedModel } from './card.ts'
 import { bytesFromDocument, documentFromBytes } from './document.ts'
 import { modelNameOf, receiverNumbersOf } from './model.ts'
 import { currentModelNumberOf } from './radioSettings.ts'
@@ -63,3 +64,91 @@ export function inspectFile(fileName: string, bytes: Uint8Array): Inspection {
     exact: differs === null,
   }
 }
+
+// A whole card: the two folders the app looks at.
+
+/** What the tool says about a card. */
+export interface CardInspection {
+  lines: readonly string[]
+  /** True when every file was read and the settings' checksum is right. */
+  clean: boolean
+}
+
+const fileName = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
+
+/**
+ * Lines the rows up in columns. A row may stop early: whatever is last in a row is not padded and
+ * does not widen its column, so one long message does not push everything else across.
+ */
+function inColumns(rows: readonly (readonly string[])[], rightAlignFirst = false): string[] {
+  const widths: number[] = []
+  for (const row of rows) {
+    row.slice(0, -1).forEach((cell, column) => (widths[column] = Math.max(widths[column] ?? 0, cell.length)))
+  }
+  return rows.map((row) =>
+    row
+      .map((cell, column) => {
+        if (column === row.length - 1) return cell
+        return column === 0 && rightAlignFirst ? cell.padStart(widths[column]) : cell.padEnd(widths[column])
+      })
+      .join('  '),
+  )
+}
+
+/** The name and receiver of a model's file, or the one thing there is to say when it has neither. */
+function about(model: CardModel | DeletedModel): string[] {
+  if (model.refusal) return [`could not be read: ${strings.files.refused[model.refusal.reason](model.refusal.line)}`]
+  if (model.name === null) return ['has no model name in it']
+  return [`"${model.name}"`, receiverWords(model.receiverNumbers)]
+}
+
+/**
+ * Says what the app makes of a card: one line for each position in use, which one the radio is
+ * set to, whether the settings' checksum is right, and everything else found in the two folders.
+ * `folders` is every folder inside MODELS and RADIO, since a card here is only its files.
+ */
+export function inspectCard(card: Card, folders: readonly string[]): CardInspection {
+  const reading = readCard(card)
+  const lines: string[] = []
+
+  lines.push(`MODELS: ${reading.models.length} of 60 places in use`)
+  const rows = reading.models.map((model) => {
+    const mark = model.position === reading.currentPosition ? ['<- the radio is set to this one'] : []
+    return [String(model.position), fileName(model.path), ...about(model), ...mark]
+  })
+  lines.push(...inColumns(rows, true).map((row) => `  ${row}`))
+
+  if (reading.deleted.length > 0) {
+    lines.push(`Deleted models kept in MODELS/DELETED: ${reading.deleted.length}`)
+    const kept = reading.deleted.map((model) => [fileName(model.path), ...about(model), `was in position ${model.cameFrom}`])
+    lines.push(...inColumns(kept).map((row) => `  ${row}`))
+  }
+
+  const settings = reading.refused.find((file) => file.path === RADIO_SETTINGS_PATH)
+  if (!card.has(RADIO_SETTINGS_PATH)) {
+    lines.push(`${RADIO_SETTINGS_PATH}: not there`)
+  } else if (settings) {
+    lines.push(`${RADIO_SETTINGS_PATH}: could not be read: ${strings.files.refused[settings.reason](settings.line)}`)
+  } else {
+    const position = reading.currentPosition
+    const there = reading.models.some((model) => model.position === position)
+    let set = 'it does not say which of the 60 places the radio is set to'
+    if (position !== null) set = `currModel is ${position - 1}, so the radio is set to position ${position}${there ? '' : ', which is empty'}`
+    let check = 'It has no checksum on its first line.'
+    if (reading.checksum?.right) check = `Its checksum is right (${reading.checksum.written}).`
+    else if (reading.checksum) check = `Its checksum is WRONG: the file says ${reading.checksum.written} and its bytes call for ${reading.checksum.expected}.`
+    lines.push(`${RADIO_SETTINGS_PATH}: ${set}. ${check}`)
+  }
+
+  // Everything else in the two folders, which the app leaves alone.
+  for (const folder of ['MODELS', 'RADIO']) {
+    const inside = [...reading.others, ...folders.map((path) => `${path}/`)]
+      .filter((path) => path.startsWith(`${folder}/`))
+      .map((path) => path.slice(folder.length + 1))
+      .toSorted()
+    lines.push(`Also in ${folder}: ${inside.length > 0 ? inside.join(', ') : 'nothing'}`)
+  }
+
+  return { lines, clean: reading.refused.length === 0 && reading.checksum?.right === true }
+}
+

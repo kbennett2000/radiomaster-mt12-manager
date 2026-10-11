@@ -1,0 +1,31 @@
+semver: 2.10.0
+header: 
+   name: "Tin Snail"
+telemetryProtocol: 0
+trimInc: 0
+hatsMode: GLOBAL
+mixData: 
+ -
+   weight: 70
+   destCh: 0
+   srcRaw: I0
+   mltpx: ADD
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+limitData: 
+   0:
+      min: 85
+      max: -85
+      revert: 0
+      name: "STR"
+thrTraceSrc: TH
+switchWarningState: 
+moduleData: 
+   0:
+      type: TYPE_MULTIMODULE
+      subType: 99,1
+      channelsStart: 0
+      channelsCount: 8
+view: 0
+modelRegistrationID: ""

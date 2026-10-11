@@ -9,19 +9,28 @@ import type { Model, ModelId } from './model.ts'
 
 const PLACES = MT12.maxModels
 
+/**
+ * Anything that holds a place in the list. The rules here only ever look at these two things, so
+ * they work for a model in the app and for a model's file on the radio's card alike.
+ */
+export interface Placed {
+  id: ModelId
+  position: number
+}
+
 /** What happens to the rest of the list when a model is deleted. The owner chooses in Radio setup. */
 export type WhenDeleting = 'closeUp' | 'leaveEmpty'
 
 /** The same models, lowest position first. */
-export const byPosition = (models: readonly Model[]): Model[] =>
+export const byPosition = <Item extends Placed>(models: readonly Item[]): Item[] =>
   models.toSorted((first, second) => first.position - second.position)
 
 /** The model in a place, or undefined when the place is empty. */
-export const modelAt = (models: readonly Model[], position: number): Model | undefined =>
+export const modelAt = <Item extends Placed>(models: readonly Item[], position: number): Item | undefined =>
   models.find((model) => model.position === position)
 
 /** Every empty place, lowest first. */
-export function emptyPositions(models: readonly Model[], places: number = PLACES): number[] {
+export function emptyPositions(models: readonly Placed[], places: number = PLACES): number[] {
   const taken = new Set(models.map((model) => model.position))
   const empty: number[] = []
   for (let position = 1; position <= places; position++) {
@@ -31,19 +40,19 @@ export function emptyPositions(models: readonly Model[], places: number = PLACES
 }
 
 /** The lowest-numbered empty place, or null when the radio is full. "Add a model" uses this. */
-export const firstEmptyPosition = (models: readonly Model[], places: number = PLACES): number | null =>
+export const firstEmptyPosition = (models: readonly Placed[], places: number = PLACES): number | null =>
   emptyPositions(models, places)[0] ?? null
 
 /** The highest position that holds a model, or 0 when there are no models. */
-export const lastTakenPosition = (models: readonly Model[]): number =>
+export const lastTakenPosition = (models: readonly Placed[]): number =>
   models.reduce((last, model) => Math.max(last, model.position), 0)
 
 /** True when at least one empty place has a model somewhere after it. */
-export const hasEmptyPlacesToCloseUp = (models: readonly Model[]): boolean =>
+export const hasEmptyPlacesToCloseUp = (models: readonly Placed[]): boolean =>
   lastTakenPosition(models) > models.length
 
 /** The models that sit after a position, lowest first. */
-export const modelsAfter = (models: readonly Model[], position: number): Model[] =>
+export const modelsAfter = <Item extends Placed>(models: readonly Item[], position: number): Item[] =>
   byPosition(models.filter((model) => model.position > position))
 
 /**
@@ -51,7 +60,7 @@ export const modelsAfter = (models: readonly Model[], position: number): Model[]
  * place before it, as if the search wrapped round to the start. Null when the radio is full.
  */
 export function firstEmptyAfter(
-  models: readonly Model[],
+  models: readonly Placed[],
   position: number,
   places: number = PLACES,
 ): number | null {
@@ -63,7 +72,7 @@ export function firstEmptyAfter(
 export const placeForCopy = firstEmptyAfter
 
 /** Puts a model into a place. The place must be empty. */
-export const placeModel = (models: readonly Model[], model: Model, position: number): Model[] =>
+export const placeModel = <Item extends Placed>(models: readonly Item[], model: Item, position: number): Item[] =>
   byPosition([...models, { ...model, position }])
 
 /**
@@ -85,12 +94,12 @@ const isPlace = (position: number, places: number): boolean =>
  * because a model only ever changes position by that one step. Moving an empty place this way
  * leaves the place it lands in empty.
  */
-export function movePlace(
-  models: readonly Model[],
+export function movePlace<Item extends Placed>(
+  models: readonly Item[],
   from: number,
   to: number,
   places: number = PLACES,
-): Model[] {
+): Item[] {
   if (!isPlace(from, places) || !isPlace(to, places)) return byPosition(models)
   return byPosition(
     models.map((model) =>
@@ -102,16 +111,16 @@ export function movePlace(
 }
 
 /** What a move would do, described before it happens. */
-export interface MoveEffect {
+export interface MoveEffect<Item extends Placed = Model> {
   /** The model in the target place now, or null when that place is empty. */
-  occupant: Model | null
+  occupant: Item | null
   /** The other models that would change place, as they stand now, lowest position first. */
-  shifted: Model[]
+  shifted: Item[]
   /** Which way those models go: 'up' is toward position 1. */
   direction: 'up' | 'down'
 }
 
-export function describeMove(models: readonly Model[], from: number, to: number): MoveEffect {
+export function describeMove<Item extends Placed>(models: readonly Item[], from: number, to: number): MoveEffect<Item> {
   return {
     occupant: from === to ? null : (modelAt(models, to) ?? null),
     shifted: byPosition(models.filter((model) => shiftFor(model.position, from, to) !== 0)),
@@ -120,18 +129,18 @@ export function describeMove(models: readonly Model[], from: number, to: number)
 }
 
 /** Takes a model out and leaves its place empty. Nothing else moves. This is what the radio itself does. */
-export const removeModel = (models: readonly Model[], modelId: ModelId): Model[] =>
+export const removeModel = <Item extends Placed>(models: readonly Item[], modelId: ModelId): Item[] =>
   byPosition(models.filter((model) => model.id !== modelId))
 
 /**
  * Takes a model out and closes up the list: every place after it, models and empty places alike,
  * moves up one place.
  */
-export function removeAndCloseUp(
-  models: readonly Model[],
+export function removeAndCloseUp<Item extends Placed>(
+  models: readonly Item[],
   modelId: ModelId,
   places: number = PLACES,
-): Model[] {
+): Item[] {
   const gone = models.find((model) => model.id === modelId)
   if (!gone) return byPosition(models)
   // Moving the place it left empty to the very end shifts everything after it up by one.
@@ -139,14 +148,14 @@ export function removeAndCloseUp(
 }
 
 /** Removes every empty place that has a model after it. The models keep their order. */
-export const closeUpEmptyPlaces = (models: readonly Model[]): Model[] =>
+export const closeUpEmptyPlaces = <Item extends Placed>(models: readonly Item[]): Item[] =>
   byPosition(models).map((model, index) => ({ ...model, position: index + 1 }))
 
 /** What bringing a deleted model back did. */
-export interface Restored {
-  models: Model[]
+export interface Restored<Item extends Placed = Model> {
+  models: Item[]
   /** The models that had to move to make room, as they stood before, lowest position first. */
-  moved: Model[]
+  moved: Item[]
   /** Which way they moved: 'down' is away from position 1. */
   direction: 'up' | 'down'
 }
@@ -159,11 +168,11 @@ export interface Restored {
  * that position each move up one place instead. Either way the model is back where it was.
  * Returns null when the radio is full.
  */
-export function restoreModel(
-  models: readonly Model[],
-  model: Model,
+export function restoreModel<Item extends Placed>(
+  models: readonly Item[],
+  model: Item,
   places: number = PLACES,
-): Restored | null {
+): Restored<Item> | null {
   const position = model.position
   if (!modelAt(models, position)) {
     return { models: placeModel(models, model, position), moved: [], direction: 'down' }

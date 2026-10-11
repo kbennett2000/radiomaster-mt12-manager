@@ -1,0 +1,21 @@
+checksum: 53631
+manuallyEdited: 0
+timezoneMinutes: 0
+semver: 2.10.0
+board: mt12
+calib: 
+   ST:
+      mid: 1002
+      spanNeg: 640
+      spanPos: 655
+currModel: 4
+contrast: 22
+internalModule: TYPE_MULTIMODULE
+ttsLanguage: "en"
+switchConfig: 
+   SA:
+      type: 3pos
+      name: ""
+backlightColor: 0
+ownerRegistrationID: "Workbench"
+modelTelemetryDisabled: 0
