@@ -5,19 +5,19 @@
 // It serves the built site, reads the list of states from the reviewer panel, and saves the states
 // that are new or changed in this cycle, at two window sizes:
 //
-//   docs/screenshots/cycle-05/        at 1440x900
-//   docs/screenshots/cycle-05-1024/   at 1024x768
+//   docs/screenshots/cycle-07/        at 1440x900
+//   docs/screenshots/cycle-07-1024/   at 1024x768
 //
 // A page taller than the window also gets a "-full" picture of the whole page. It only ever
 // writes into those two folders. Pictures from earlier cycles are left alone.
 //
-// It also takes one picture of the list of 20 models with a wider font forced on the page, to
-// show that the receiver names still show in full on a computer whose font is wider. The app's
-// own font is not changed: the wider font exists only in that one picture.
+// When the list of 20 models is one of the states, it also takes one picture of it with a wider
+// font forced on the page, to show that the receiver names still show in full on a computer whose
+// font is wider. The app's own font is not changed: the wider font exists only in that picture.
 //
-// The script fails if a banned word shows up, a page overflows sideways, the page reports an
-// error, the list of 20 models grows taller than its target, a row of that list runs past two
-// lines at 1440px, or a receiver name or an action in the list is cut short.
+// The script fails if a banned word shows up, a page overflows sideways, or the page reports an
+// error. On the list of 20 models it also fails if the list grows taller than its target, a row
+// runs past two lines at 1440px, or a receiver name or an action is cut short.
 
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -27,12 +27,14 @@ import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// The groups of states that are new or changed in this cycle. Connect and Finish are not.
-const GROUPS = ['models', 'delete', 'wizard', 'edit']
+// The states to save in this cycle: the two pages the picture of the radio was taken off, and
+// the two Extras pages for an existing model, whose help text changed. The open reviewer panel is
+// always saved as well.
+const STATES = ['wizard-review-crawler', 'edit-trx4', 'edit-extras', 'edit-extras-held']
 
 const SETS = [
-  { dir: 'docs/screenshots/cycle-05', width: 1440, height: 900 },
-  { dir: 'docs/screenshots/cycle-05-1024', width: 1024, height: 768 },
+  { dir: 'docs/screenshots/cycle-07', width: 1440, height: 900 },
+  { dir: 'docs/screenshots/cycle-07-1024', width: 1024, height: 768 },
 ]
 
 // A font that is wider than the one the app uses here, forced on the page for one picture only.
@@ -168,7 +170,7 @@ async function saveSet(browser, baseUrl, set) {
   let saved = 0
 
   for (const scenario of numbered) {
-    if (!GROUPS.includes(scenario.group)) continue
+    if (!STATES.includes(scenario.id)) continue
     await page.goto(new URL(scenario.href, baseUrl).href)
     await settle(page)
     await check(page, scenario.name, set.width)
