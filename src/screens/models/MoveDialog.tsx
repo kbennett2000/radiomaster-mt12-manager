@@ -2,16 +2,20 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/Button.tsx'
 import { Dialog, DialogActions } from '../../components/Dialog.tsx'
 import { MT12 } from '../../domain/catalog.ts'
-import type { Model } from '../../domain/model.ts'
-import { describeMove, modelAt, type MoveEffect } from '../../domain/positions.ts'
+import { describeMove, modelAt, type MoveEffect, type Placed } from '../../domain/positions.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './MoveDialog.module.css'
+
+/** A model as far as this dialog needs it: where it is and what to call it. */
+interface Listed extends Placed {
+  name: string
+}
 
 interface MoveDialogProps {
   /** The place being moved. It holds a model or it is empty. */
   fromPosition: number
   /** Every model on the radio, so the dialog can say what is where. */
-  models: readonly Model[]
+  models: readonly Listed[]
   /** A position to start on. Only the review scenarios use this. */
   toPosition?: number
   onConfirm: (toPosition: number) => void
@@ -22,7 +26,7 @@ const text = strings.moveModel
 const allPositions = Array.from({ length: MT12.maxModels }, (_, index) => index + 1)
 
 /** What else changes place, in one sentence. */
-function shiftSentence({ shifted, direction }: MoveEffect): string {
+function shiftSentence({ shifted, direction }: MoveEffect<Listed>): string {
   if (shifted.length === 0) return text.nothingElseMoves
   const step = direction === 'up' ? -1 : 1
   if (shifted.length === 1) {

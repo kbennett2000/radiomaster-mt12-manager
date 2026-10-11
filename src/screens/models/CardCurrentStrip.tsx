@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react'
-import { CheckIcon, DownIcon } from '../../components/icons.tsx'
+import { ButtonLink } from '../../components/Button.tsx'
+import { CheckIcon, DownIcon, EditIcon } from '../../components/icons.tsx'
 import type { CardReading } from '../../files/card.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
@@ -15,9 +16,10 @@ function showRow(event: MouseEvent, position: number) {
 }
 
 /**
- * Says which model a real card's radio is set to. It only says: there is nothing to change here.
- * The radio can be set to a place with no model in it, and then the strip says that plainly.
- * When the settings do not name a place at all there is no strip, and a line above the list says why.
+ * Says which model a real card's radio is set to, with a way to its Edit page when the app could
+ * read it. The radio can be set to a place with no model in it, and then the strip says that
+ * plainly. When the settings do not name a place at all there is no strip, and a line above the
+ * list says why.
  */
 export function CardCurrentStrip({ reading }: { reading: CardReading }) {
   const position = reading.currentPosition
@@ -35,6 +37,16 @@ export function CardCurrentStrip({ reading }: { reading: CardReading }) {
         <CheckIcon />
       </span>
       <p className={styles.words}>{words}</p>
+      {model && model.name !== null && (
+        <ButtonLink
+          size="small"
+          href={paths.editModel(placeRowId(position))}
+          icon={<EditIcon />}
+          aria-label={strings.models.editNamed(model.name || text.unnamed(position))}
+        >
+          {strings.models.edit}
+        </ButtonLink>
+      )}
       {model && (
         // A link, because it takes you somewhere on the page. It stays on this screen.
         <a className={styles.show} href={paths.home} onClick={(event) => showRow(event, position)}>

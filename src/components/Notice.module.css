@@ -27,3 +27,9 @@
   flex: none;
   gap: var(--space-2);
 }
+
+/* One more thing worth knowing, said quietly under the message. */
+.note {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+}

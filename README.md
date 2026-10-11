@@ -6,9 +6,11 @@ It lets you add, edit and delete the models on the radio without going through t
 It is a static site. There is no server, no account and no analytics, and your model files never leave your
 computer.
 
-**Status: early.** Right now it reads the models on a radio's card and lists them. It does not write to a radio
-yet. Everything that changes a model is still a clickable mockup running on sample models. Full documentation
-comes later.
+**Status: early.** Right now it reads the models on a radio's card and lists them, and it can copy, move,
+rename, delete and restore them on the card. Before its first change it copies the models to a folder called
+`APP-BACKUPS` on the card. Changing a card has only been tried on made-up cards so far, not on a real radio.
+Adding a model, and showing or changing what a model has, are still clickable mockups running on sample models.
+Full documentation comes later.
 
 ## Run it
 

@@ -249,7 +249,7 @@ export function ModelsScreen({ state, dispatch, onAdd }: ModelsScreenProps) {
 
       {state.recentlyDeleted.length > 0 && (
         <RecentlyDeleted
-          deleted={state.recentlyDeleted}
+          deleted={state.recentlyDeleted.map((model) => ({ ...model, detail: strings.receiverTypes[model.receiverTypeId] }))}
           onRestore={(modelId) => dispatch({ type: 'restoreRequested', modelId })}
         />
       )}

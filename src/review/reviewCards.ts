@@ -3,7 +3,7 @@
 // Every one is built from the made-up card under src/files/testdata/card, with small changes.
 // Nothing here comes from a real radio.
 
-import { modelPath, RADIO_SETTINGS_PATH, type Card } from '../files/card.ts'
+import { deletedPath, modelPath, RADIO_SETTINGS_PATH, type Card } from '../files/card.ts'
 import { bytesFromDocument, bytesFromText, documentFromBytes } from '../files/document.ts'
 import { withModelName } from '../files/model.ts'
 import { withCurrentModelNumber } from '../files/radioSettings.ts'
@@ -108,6 +108,17 @@ const cards: Record<ReviewCard, () => Card> = {
   },
   wrongChecksum: () => new Map(madeUp).set(RADIO_SETTINGS_PATH, withAWrongCheck(madeUp.get(RADIO_SETTINGS_PATH)!)),
   noModelsFolder: () => new Map([...madeUp].filter(([path]) => !path.startsWith('MODELS/'))),
+  // Two models deleted earlier. The one deleted last has a file that cannot be read.
+  twoDeleted: () =>
+    new Map(madeUp)
+      .set(deletedPath(1, 7), named(KNOWN[0], 'Dust Moth'))
+      .set(deletedPath(2, 4), withABadLine(named(KNOWN[1], 'Rock Wren'), 3)),
+  // Every one of the 60 places taken.
+  fullCard: () =>
+    cardWith(
+      Array.from({ length: 60 }, (_, index) => [index + 1, named(KNOWN[index % KNOWN.length], `Rig ${String(index + 1).padStart(2, '0')}`)]),
+      12,
+    ),
 }
 
 /** The files of one of the reviewer's made-up cards: each path from the top of the card, and its bytes. */

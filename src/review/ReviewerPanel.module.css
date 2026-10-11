@@ -52,41 +52,24 @@
 }
 
 /*
- * Six columns. The three short groups, Connect, Real card and Finish, share the first one. The
- * wizard has the most states by far, so it takes two columns and lists its states in two halves.
- * Edit has the last.
+ * Six columns of groups, on seven tracks. The short groups share a column: Connect with Real
+ * card, and Delete with Finish. The wizard has the most states by far, so its column is two tracks
+ * wide and lists its states in two halves.
  */
 .groups {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: auto auto 1fr;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: start;
   gap: var(--space-4);
 }
 
-.groups section {
-  grid-row: 1 / span 3;
+.column {
+  display: grid;
+  gap: var(--space-4);
 }
 
-.groups section[data-group='connect'] {
-  grid-row: 1;
-}
-
-.groups section[data-group='realCard'] {
-  grid-row: 2;
-  grid-column: 1;
-}
-
-.groups section[data-group='finish'] {
-  grid-row: 3;
-  grid-column: 1;
-}
-
-.groups section[data-group='wizard'] {
-  grid-column: 4 / span 2;
-}
-
-.groups section[data-group='edit'] {
-  grid-column: 6;
+.column[data-column='wizard'] {
+  grid-column: span 2;
 }
 
 .groups section[data-group='wizard'] .links {
@@ -115,6 +98,32 @@
   text-decoration-thickness: var(--border-thick);
 }
 
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-5);
+}
+
 .startOver {
-  justify-self: start;
+  white-space: nowrap;
+}
+
+/* The switch that makes the next save to a made-up card go wrong. */
+.switch {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  padding: 0;
+  border: none;
+}
+
+.switch:disabled {
+  color: var(--color-text-muted);
+}
+
+.choice {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
 }

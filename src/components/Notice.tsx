@@ -5,6 +5,8 @@ import styles from './Notice.module.css'
 interface NoticeProps {
   title: string
   children: ReactNode
+  /** One more thing worth knowing, said quietly under the message. */
+  note?: string
   /** Buttons that belong to the message, such as Undo. */
   actions?: ReactNode
   /** Changes whenever there is a new message to announce. */
@@ -16,7 +18,7 @@ interface NoticeProps {
  * appears, so the message is read out and its buttons are the next stop. Taking focus does not
  * scroll the page: whoever shows the notice keeps it in view, so the person keeps their place.
  */
-export function Notice({ title, children, actions, announceKey }: NoticeProps) {
+export function Notice({ title, children, note, actions, announceKey }: NoticeProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -31,6 +33,7 @@ export function Notice({ title, children, actions, announceKey }: NoticeProps) {
       <div className={styles.words}>
         <p className={styles.title}>{title}</p>
         <p>{children}</p>
+        {note && <p className={styles.note}>{note}</p>}
       </div>
       {actions && <div className={styles.actions}>{actions}</div>}
     </div>

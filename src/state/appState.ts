@@ -23,7 +23,8 @@ import {
 } from '../domain/positions.ts'
 import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { BaseFitting } from '../domain/radio.ts'
-import type { CardReading } from '../files/card.ts'
+import type { Card } from '../files/card.ts'
+import { cardReducer, cardStateFor, isCardStateAction, type CardState, type CardStateAction } from './cardState.ts'
 import {
   openPart,
   partHasChanges,
@@ -110,8 +111,8 @@ export interface AppState {
   radio: RadioSetup
   /** What a delete does to the rest of the list. Chosen in Radio setup. */
   whenDeleting: WhenDeleting
-  /** What was read from a real card. Null when the app is showing the sample models. */
-  card: CardReading | null
+  /** The real card the app is showing, and what is going on with it. Null when the app is showing the sample models. */
+  card: CardState | null
   /** The sample models, lowest position first. Empty while a real card is shown. */
   models: readonly Model[]
   /** The model the radio is currently set to. */
@@ -142,8 +143,12 @@ export type Action =
   | { type: 'connectCancelled' }
   /** The folder that was picked is not a radio's card. */
   | { type: 'wrongFolderPicked' }
-  /** A real card was read. */
-  | { type: 'cardConnected'; reading: CardReading }
+  /** A real card was read. `files` is every file read from it. */
+  | { type: 'cardConnected'; files: Card }
+  /** The card was read afresh, after a save that could not be trusted. */
+  | { type: 'cardReadAgain'; files: Card }
+  /** Everything that happens to a real card once it is connected. See cardState.ts. */
+  | CardStateAction
   /** The sample models were asked for. */
   | { type: 'connectSucceeded'; models: readonly Model[]; currentModelId: ModelId | null }
   | { type: 'disconnected' }
@@ -213,7 +218,8 @@ export function initialState(browserSupported: boolean): AppState {
 export const isRadioFull = (state: AppState): boolean => state.models.length >= MT12.maxModels
 
 /** How many models there are to show: the ones on the real card, or the sample ones. */
-export const modelCountOf = (state: AppState): number => (state.card ? state.card.models.length : state.models.length)
+export const modelCountOf = (state: AppState): number =>
+  state.card ? state.card.reading.models.length : state.models.length
 
 /** True once the radio is connected and the app knows what is on its base. */
 export const isReady = (state: AppState): boolean =>
@@ -239,6 +245,13 @@ export function shiftOf(moved: readonly Model[], direction: 'up' | 'down'): Shif
 const nothingMoved: Shift = shiftOf([], 'down')
 
 export function reducer(state: AppState, action: Action): AppState {
+  if (isCardStateAction(action)) {
+    if (!state.card) return state
+    // One confirmation at a time: a change saved to the card takes the place of the one for Radio setup.
+    const notice = action.type === 'cardSaved' ? null : state.notice
+    return { ...state, card: cardReducer(state.card, action), notice }
+  }
+
   switch (action.type) {
     case 'connectStarted':
       return { ...state, connection: 'connecting' }
@@ -247,7 +260,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, connection: 'notConnected' }
 
     case 'wrongFolderPicked':
-      return { ...state, connection: 'wrongFolder', justDisconnected: false }
+      // This also ends a real card that can no longer be read: there is nothing left to show of it.
+      return { ...state, connection: 'wrongFolder', justDisconnected: false, card: null }
 
     case 'cardConnected':
       // A real card is shown on its own. Sample models from an earlier try are put away.
@@ -256,7 +270,7 @@ export function reducer(state: AppState, action: Action): AppState {
         connection: 'connected',
         radioLoaded: false,
         justDisconnected: false,
-        card: action.reading,
+        card: cardStateFor(action.files),
         models: [],
         currentModelId: null,
         recentlyDeleted: [],
@@ -267,6 +281,9 @@ export function reducer(state: AppState, action: Action): AppState {
         newModelId: null,
         lastAddedModelId: null,
       }
+
+    case 'cardReadAgain':
+      return state.card ? { ...state, card: cardStateFor(action.files), notice: null } : state
 
     case 'connectSucceeded':
       // Sample models that were unplugged and connected again still have what was saved to them.
@@ -308,6 +325,8 @@ export function reducer(state: AppState, action: Action): AppState {
         radio: { ...state.radio, baseFitting: action.baseFitting },
         whenDeleting: action.whenDeleting,
         notice: { kind: 'radioSetupSaved' },
+        // One confirmation at a time: this one takes the place of a real card's last one.
+        card: state.card ? { ...state.card, notice: null } : null,
       }
 
     case 'addRequestedWhileFull':
