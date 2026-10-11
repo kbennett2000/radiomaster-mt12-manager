@@ -35,8 +35,13 @@ made-up card under `src/files/testdata/card/`.
    written somewhere else. When models swap round in a full circle, with no empty place to begin from, there is
    nothing to wait for. Then the first of them is copied to a spare file before anything is written over, and
    the spare is removed at the end.
-7. **The settings are written last.** `radio.yml` names the current model by its file, so it is the last write
-   in a list, after that model is in its new place and before any old file is removed.
+7. **The settings follow their model at once.** `radio.yml` names the current model by its file. It is written
+   as soon as that model is in its new file, and before the model's old file is written over or removed. Until
+   it is written, the file it names is left alone. So wherever the work stops, the radio is set to the model it
+   was set to before, or to the one it is being set to. When holding that file back leaves no write that is
+   safe to make, a spare file is used, as in decision 6. At first the settings were the last write in a list.
+   That could leave the radio set to the wrong model, because another model could be written over the current
+   model's old file while the settings still named it.
 8. **A deleted model is kept, not destroyed.** Its bytes move to `MODELS/DELETED/`, under a name like
    `0001-model07.yml`. The number at the front is one higher than any deleted model already there, so two names
    can never clash and they sort in the order they were deleted. The rest is the model file it was taken from,
