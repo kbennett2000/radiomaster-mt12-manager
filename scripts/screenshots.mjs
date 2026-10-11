@@ -5,19 +5,24 @@
 // It serves the built site, reads the list of states from the reviewer panel, and saves the states
 // that are new or changed in this cycle, at two window sizes:
 //
-//   docs/screenshots/cycle-05/        at 1440x900
-//   docs/screenshots/cycle-05-1024/   at 1024x768
+//   docs/screenshots/cycle-06/        at 1440x900
+//   docs/screenshots/cycle-06-1024/   at 1024x768
 //
 // A page taller than the window also gets a "-full" picture of the whole page. It only ever
 // writes into those two folders. Pictures from earlier cycles are left alone.
 //
-// It also takes one picture of the list of 20 models with a wider font forced on the page, to
-// show that the receiver names still show in full on a computer whose font is wider. The app's
-// own font is not changed: the wider font exists only in that one picture.
+// A state that shows the labeled picture of the radio also gets a "-picture" close-up of just
+// that picture, so each label and its line can be checked against the radio one at a time.
 //
-// The script fails if a banned word shows up, a page overflows sideways, the page reports an
-// error, the list of 20 models grows taller than its target, a row of that list runs past two
-// lines at 1440px, or a receiver name or an action in the list is cut short.
+// When the list of 20 models is one of the states, it also takes one picture of it with a wider
+// font forced on the page, to show that the receiver names still show in full on a computer whose
+// font is wider. The app's own font is not changed: the wider font exists only in that picture.
+//
+// The script fails if a banned word shows up, a page overflows sideways, or the page reports an
+// error. On the picture of the radio it fails if two labels overlap, a label overlaps the
+// drawing or is cut short, a line does not run from its label to the dot on its control, or two
+// lines cross. On the list of 20 models it fails if the list grows taller than its target, a row
+// runs past two lines at 1440px, or a receiver name or an action is cut short.
 
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -27,13 +32,101 @@ import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// The groups of states that are new or changed in this cycle. Connect and Finish are not.
-const GROUPS = ['models', 'delete', 'wizard', 'edit']
+// The states that are new or changed in this cycle: the new group that shows the picture of the
+// radio, and the earlier states of the pages it was added to. The two Extras pages for an
+// existing model have new help text.
+const GROUPS = ['picture']
+const ALSO = [
+  'wizard-review',
+  'wizard-review-crawler',
+  'edit-micro-b',
+  'edit-trx4',
+  'edit-trx4-22',
+  'edit-airboat',
+  'edit-tarantula',
+  'edit-mini-8ight',
+  'edit-extras',
+  'edit-extras-held',
+  'edit-saved',
+  'edit-saved-receiver',
+]
 
 const SETS = [
-  { dir: 'docs/screenshots/cycle-05', width: 1440, height: 900 },
-  { dir: 'docs/screenshots/cycle-05-1024', width: 1024, height: 768 },
+  { dir: 'docs/screenshots/cycle-06', width: 1440, height: 900 },
+  { dir: 'docs/screenshots/cycle-06-1024', width: 1024, height: 768 },
 ]
+
+/**
+ * Runs in the page: everything wrong with the labeled picture of the radio, in words. Each label
+ * must be clear of the other labels and of the drawing, show in full, and have one line that runs
+ * from it to the dot on its control without crossing another line.
+ */
+function readPictureProblems() {
+  const found = []
+  const near = (first, second, slack) => Math.hypot(first.x - second.x, first.y - second.y) <= slack
+  const overlap = (first, second) =>
+    first.left < second.right - 0.5 &&
+    second.left < first.right - 0.5 &&
+    first.top < second.bottom - 0.5 &&
+    second.top < first.bottom - 0.5
+  // True when two line segments cross somewhere other than at an end they share.
+  const cross = (one, two) => {
+    const side = (a, b, c) => Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x))
+    return (
+      side(one.from, one.to, two.from) * side(one.from, one.to, two.to) < 0 &&
+      side(two.from, two.to, one.from) * side(two.from, two.to, one.to) < 0
+    )
+  }
+
+  for (const picture of document.querySelectorAll('[data-radio-picture]')) {
+    const frame = picture.getBoundingClientRect()
+    const labels = [...picture.querySelectorAll('[data-control-label]')].map((element) => ({
+      control: element.dataset.controlLabel,
+      words: element.textContent.trim(),
+      element,
+      box: element.getBoundingClientRect(),
+    }))
+    const drawings = [...picture.querySelectorAll('[data-radio-drawing]')].map((svg) => svg.getBoundingClientRect())
+    const lines = [...picture.querySelectorAll('[data-leader-for]')].map((line) => {
+      const box = line.ownerSVGElement.getBoundingClientRect()
+      const at = (x, y) => ({ x: box.left + Number(line.getAttribute(x)), y: box.top + Number(line.getAttribute(y)) })
+      return { control: line.dataset.leaderFor, from: at('x1', 'y1'), to: at('x2', 'y2') }
+    })
+
+    if (labels.length === 0) found.push('the picture has no labels')
+    for (const label of labels) {
+      const { control, words, box, element } = label
+      if (box.width === 0 || box.height === 0) found.push(`the label "${words}" has no size`)
+      if (element.scrollWidth > element.clientWidth + 1) found.push(`the label "${words}" is cut short`)
+      if (box.left < frame.left - 0.5 || box.right > frame.right + 0.5 || box.top < frame.top - 0.5 || box.bottom > frame.bottom + 0.5) {
+        found.push(`the label "${words}" runs outside the picture`)
+      }
+      if (drawings.some((drawing) => overlap(box, drawing))) found.push(`the label "${words}" overlaps the drawing`)
+      for (const other of labels) {
+        if (other.control < control && overlap(box, other.box)) found.push(`the labels "${other.words}" and "${words}" overlap`)
+      }
+
+      const dot = picture.querySelector(`[data-control-dot="${control}"]`)?.getBoundingClientRect()
+      const mine = lines.filter((line) => line.control === control)
+      if (!dot) found.push(`${control} has no dot on the drawing`)
+      if (mine.length !== 1) found.push(`${control} has ${mine.length} lines, not one`)
+      if (!dot || mine.length !== 1) continue
+      const centre = { x: dot.left + dot.width / 2, y: dot.top + dot.height / 2 }
+      if (!near(mine[0].to, centre, 1.5)) found.push(`the line for "${words}" does not end on its dot`)
+      // The line starts on the edge of its label, or within a few pixels of it.
+      const start = mine[0].from
+      const gapX = Math.max(box.left - start.x, 0, start.x - box.right)
+      const gapY = Math.max(box.top - start.y, 0, start.y - box.bottom)
+      if (Math.hypot(gapX, gapY) > 8) found.push(`the line for "${words}" does not start at its label`)
+    }
+    for (const line of lines) {
+      for (const other of lines) {
+        if (other.control < line.control && cross(line, other)) found.push(`the lines for ${other.control} and ${line.control} cross`)
+      }
+    }
+  }
+  return found
+}
 
 // A font that is wider than the one the app uses here, forced on the page for one picture only.
 const WIDER_FONT = { state: 'models-20', family: "Verdana, 'DejaVu Sans', sans-serif", suffix: 'wider-font' }
@@ -168,10 +261,13 @@ async function saveSet(browser, baseUrl, set) {
   let saved = 0
 
   for (const scenario of numbered) {
-    if (!GROUPS.includes(scenario.group)) continue
+    if (!GROUPS.includes(scenario.group) && !ALSO.includes(scenario.id)) continue
     await page.goto(new URL(scenario.href, baseUrl).href)
     await settle(page)
     await check(page, scenario.name, set.width)
+    for (const problem of await page.evaluate(readPictureProblems)) {
+      problems.push(`${scenario.name}: ${problem} at ${set.width}px`)
+    }
     for (const name of await page.evaluate(readCutReceiverNames)) {
       problems.push(`${scenario.name}: the receiver name "${name}" is cut short at ${set.width}px`)
     }
@@ -183,13 +279,19 @@ async function saveSet(browser, baseUrl, set) {
 
     const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight)
     const dialogOpen = await page.evaluate(() => Boolean(document.querySelector('dialog[open]')))
-    if (pageHeight > set.height && !dialogOpen) {
+    const picture = page.locator('[data-radio-picture]')
+    const hasPicture = (await picture.count()) > 0
+    if ((pageHeight > set.height || hasPicture) && !dialogOpen) {
       // The reviewer tab is pinned to the window, so it has no true place in a whole-page picture.
       // Neither does a bar that sticks to the bottom of the window: it is shown where it ends up.
       await page.addStyleTag({
         content: '[data-review-panel] { visibility: hidden } [data-sticks-to-window] { position: static }',
       })
-      await page.screenshot({ path: path.join(outDir, `${scenario.name}-full.png`), fullPage: true })
+      if (pageHeight > set.height) {
+        await page.screenshot({ path: path.join(outDir, `${scenario.name}-full.png`), fullPage: true })
+      }
+      // A close-up of the labeled picture of the radio, with nothing lying over it.
+      if (hasPicture) await picture.first().screenshot({ path: path.join(outDir, `${scenario.name}-picture.png`) })
     }
 
     if (scenario.id === DENSITY.state && set.width === DENSITY.width) {

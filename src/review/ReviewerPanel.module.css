@@ -52,18 +52,19 @@
 }
 
 /*
- * Six columns. The two short groups, Connect and Finish, share the first one. The wizard has the
- * most states by far, so it takes two columns and lists its states in two halves. Edit has the last.
+ * Six columns. The three short groups, Connect, Finish and the picture of the radio, share the
+ * first one. The wizard has the most states by far, so it takes two columns and lists its states
+ * in two halves. Edit has the last.
  */
 .groups {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   gap: var(--space-4);
 }
 
 .groups section {
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
 }
 
 .groups section[data-group='connect'] {
@@ -72,6 +73,11 @@
 
 .groups section[data-group='finish'] {
   grid-row: 2;
+  grid-column: 1;
+}
+
+.groups section[data-group='picture'] {
+  grid-row: 3;
   grid-column: 1;
 }
 

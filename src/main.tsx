@@ -12,6 +12,6 @@ const scenario = findScenario(new URLSearchParams(window.location.search).get('s
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App initialState={scenario?.state ?? initialState(canOpenRadioDrive())} />
+    <App initialState={scenario?.state ?? initialState(canOpenRadioDrive())} showOnOpen={scenario?.show} />
   </StrictMode>,
 )

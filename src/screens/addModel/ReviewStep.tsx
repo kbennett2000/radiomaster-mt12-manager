@@ -1,7 +1,7 @@
 import { paths } from '../../state/useHashRoute.ts'
 import { modelFrom } from '../../state/wizard.ts'
 import { strings } from '../../strings/en.ts'
-import { ControlsSection, ModelSummary, PortsSection } from './ModelSummary.tsx'
+import { ControlsSection, ModelSummary, PictureSection, PortsSection } from './ModelSummary.tsx'
 import styles from './ReviewStep.module.css'
 import type { StepProps } from './stepProps.ts'
 import stepStyles from './steps.module.css'
@@ -28,6 +28,7 @@ export function ReviewStep({ draft, baseFitting, onViewChange }: StepProps) {
           onClick: part === 'extras' ? () => onViewChange({ openExtraId: extraId ?? null }) : undefined,
         })}
       />
+      <PictureSection features={features} baseFitting={baseFitting} heading="h3" />
       <ControlsSection features={features} baseFitting={baseFitting} heading="h3" />
       <PortsSection features={features} heading="h3" />
       <p className={styles.afterThis}>{text.afterThis}</p>

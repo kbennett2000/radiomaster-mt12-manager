@@ -364,7 +364,7 @@ export function ExtrasStep({
     <div className={stepStyles.step}>
       <div>
         <h2>{text.question}</h2>
-        <p className={stepStyles.intro}>{text.help}</p>
+        <p className={stepStyles.intro}>{editing ? strings.editModel.extrasHelp : text.help}</p>
       </div>
 
       <ul className={styles.list}>
