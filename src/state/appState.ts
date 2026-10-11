@@ -1,6 +1,9 @@
-// Everything the mockup remembers, and every way it can change.
+// Everything the app remembers, and every way it can change.
 // The screens only read this state and dispatch these actions.
 // Where a model goes is always decided by the position rules in src/domain/positions.ts.
+//
+// The app shows one of two things once it is connected: what it read from a real card, which it
+// only reads, or the sample models, which can be changed in every way the screens allow.
 
 import { DEFAULT_RADIO_MODULE_ID, MT12, type RadioSetup } from '../domain/catalog.ts'
 import type { Model, ModelId } from '../domain/model.ts'
@@ -20,6 +23,7 @@ import {
 } from '../domain/positions.ts'
 import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { BaseFitting } from '../domain/radio.ts'
+import type { CardReading } from '../files/card.ts'
 import {
   openPart,
   partHasChanges,
@@ -106,7 +110,9 @@ export interface AppState {
   radio: RadioSetup
   /** What a delete does to the rest of the list. Chosen in Radio setup. */
   whenDeleting: WhenDeleting
-  /** The models on the radio, lowest position first. */
+  /** What was read from a real card. Null when the app is showing the sample models. */
+  card: CardReading | null
+  /** The sample models, lowest position first. Empty while a real card is shown. */
   models: readonly Model[]
   /** The model the radio is currently set to. */
   currentModelId: ModelId | null
@@ -132,6 +138,13 @@ export interface AppState {
 
 export type Action =
   | { type: 'connectStarted' }
+  /** The folder picker was closed without a folder being chosen. */
+  | { type: 'connectCancelled' }
+  /** The folder that was picked is not a radio's card. */
+  | { type: 'wrongFolderPicked' }
+  /** A real card was read. */
+  | { type: 'cardConnected'; reading: CardReading }
+  /** The sample models were asked for. */
   | { type: 'connectSucceeded'; models: readonly Model[]; currentModelId: ModelId | null }
   | { type: 'disconnected' }
   | { type: 'baseFittingAnswered'; baseFitting: BaseFitting }
@@ -183,6 +196,7 @@ export function initialState(browserSupported: boolean): AppState {
     justDisconnected: false,
     radio: { moduleId: DEFAULT_RADIO_MODULE_ID, baseFitting: null },
     whenDeleting: 'closeUp',
+    card: null,
     models: [],
     currentModelId: null,
     recentlyDeleted: [],
@@ -197,6 +211,9 @@ export function initialState(browserSupported: boolean): AppState {
 }
 
 export const isRadioFull = (state: AppState): boolean => state.models.length >= MT12.maxModels
+
+/** How many models there are to show: the ones on the real card, or the sample ones. */
+export const modelCountOf = (state: AppState): number => (state.card ? state.card.models.length : state.models.length)
 
 /** True once the radio is connected and the app knows what is on its base. */
 export const isReady = (state: AppState): boolean =>
@@ -224,16 +241,42 @@ const nothingMoved: Shift = shiftOf([], 'down')
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'connectStarted':
-      return { ...state, connection: 'connecting', justDisconnected: false }
+      return { ...state, connection: 'connecting' }
+
+    case 'connectCancelled':
+      return { ...state, connection: 'notConnected' }
+
+    case 'wrongFolderPicked':
+      return { ...state, connection: 'wrongFolder', justDisconnected: false }
+
+    case 'cardConnected':
+      // A real card is shown on its own. Sample models from an earlier try are put away.
+      return {
+        ...state,
+        connection: 'connected',
+        radioLoaded: false,
+        justDisconnected: false,
+        card: action.reading,
+        models: [],
+        currentModelId: null,
+        recentlyDeleted: [],
+        notice: null,
+        dialog: null,
+        wizard: null,
+        edit: null,
+        newModelId: null,
+        lastAddedModelId: null,
+      }
 
     case 'connectSucceeded':
-      // A radio that was unplugged and plugged in again still has what was saved to it.
-      if (state.radioLoaded) return { ...state, connection: 'connected', justDisconnected: false }
+      // Sample models that were unplugged and connected again still have what was saved to them.
+      if (state.radioLoaded) return { ...state, connection: 'connected', justDisconnected: false, card: null }
       return {
         ...state,
         connection: 'connected',
         radioLoaded: true,
         justDisconnected: false,
+        card: null,
         models: action.models,
         currentModelId: action.currentModelId,
         recentlyDeleted: [],
@@ -246,6 +289,8 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         connection: 'notConnected',
         justDisconnected: true,
+        // What was read from a real card is not kept once the card is unplugged.
+        card: null,
         notice: null,
         dialog: null,
         wizard: null,

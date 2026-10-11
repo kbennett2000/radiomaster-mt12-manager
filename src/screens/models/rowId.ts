@@ -3,6 +3,9 @@ import type { ModelId } from '../../domain/model.ts'
 /** The id of a model's row in the page, so other parts of the screen can scroll to it. */
 export const rowId = (modelId: ModelId): string => `model-row-${modelId}`
 
+/** What a real card's row goes by in place of a model's id: its position. */
+export const placeRowId = (position: number): ModelId => `place-${position}`
+
 /**
  * Brings a model's row into the middle of the window. It slides there, unless the person has
  * asked their computer for less motion. Returns the row, or null if the model has no row.

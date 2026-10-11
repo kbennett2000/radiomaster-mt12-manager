@@ -6,8 +6,9 @@ It lets you add, edit and delete the models on the radio without going through t
 It is a static site. There is no server, no account and no analytics, and your model files never leave your
 computer.
 
-**Status: early.** Right now it is a set of clickable mockup screens running on sample data. It does not read or
-write a radio yet. Full documentation comes later.
+**Status: early.** Right now it reads the models on a radio's card and lists them. It does not write to a radio
+yet. Everything that changes a model is still a clickable mockup running on sample models. Full documentation
+comes later.
 
 ## Run it
 

@@ -3,14 +3,17 @@ import { Button, ButtonLink } from '../../components/Button.tsx'
 import { PickDriveDrawing, PlugInCableDrawing, RadioScreenDrawing } from '../../components/drawings.tsx'
 import { AlertIcon, CheckIcon, PlugIcon, SpinnerIcon } from '../../components/icons.tsx'
 import type { BaseFitting } from '../../domain/radio.ts'
-import type { AppState } from '../../state/appState.ts'
+import { modelCountOf, type AppState } from '../../state/appState.ts'
 import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './ConnectScreen.module.css'
 
 interface ConnectScreenProps {
   state: AppState
+  /** Opens the browser's folder picker, to read the radio's card. */
   onConnect: () => void
+  /** Opens the app with the sample models, with no radio. */
+  onTrySample: () => void
   onBaseFittingAnswered: (baseFitting: BaseFitting) => void
 }
 
@@ -22,13 +25,29 @@ function StepDrawing({ step }: { step: number }) {
   return <PickDriveDrawing />
 }
 
-export function ConnectScreen({ state, onConnect, onBaseFittingAnswered }: ConnectScreenProps) {
+/** The quiet way in for someone with no radio to hand: the app as it works on sample models. */
+function SampleLink({ onTrySample }: { onTrySample: () => void }) {
+  return (
+    <a
+      className={styles.quietLink}
+      href={paths.home}
+      onClick={(event) => {
+        event.preventDefault()
+        onTrySample()
+      }}
+    >
+      {text.sampleLink}
+    </a>
+  )
+}
+
+export function ConnectScreen({ state, onConnect, onTrySample, onBaseFittingAnswered }: ConnectScreenProps) {
   if (state.connection === 'connected') {
     return (
       <div className={styles.page}>
         <p className={styles.connected}>
           <CheckIcon />
-          <span>{text.connected.found(state.models.length)}</span>
+          <span>{text.connected.found(modelCountOf(state))}</span>
         </p>
         <h1>{text.connected.title}</h1>
         <p className={styles.intro}>{text.connected.oneQuestion}</p>
@@ -49,6 +68,7 @@ export function ConnectScreen({ state, onConnect, onBaseFittingAnswered }: Conne
           <ButtonLink variant="primary" size="large" href={paths.openFiles}>
             {text.openFilesLink}
           </ButtonLink>
+          <SampleLink onTrySample={onTrySample} />
         </div>
       </div>
     )
@@ -114,9 +134,12 @@ export function ConnectScreen({ state, onConnect, onBaseFittingAnswered }: Conne
           {connecting ? text.connecting.status : null}
         </p>
         {!connecting && (
-          <a className={styles.quietLink} href={paths.openFiles}>
-            {text.openFilesLink}
-          </a>
+          <>
+            <a className={styles.quietLink} href={paths.openFiles}>
+              {text.openFilesLink}
+            </a>
+            <SampleLink onTrySample={onTrySample} />
+          </>
         )}
       </div>
     </div>
