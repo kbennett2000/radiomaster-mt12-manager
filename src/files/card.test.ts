@@ -15,7 +15,7 @@ import {
 } from './cardActions.ts'
 import { applyChanges, changesBetween, sameBytes, type Change } from './changes.ts'
 import { bytesFromText, documentFromBytes, valueAt } from './document.ts'
-import { crc16 } from './radioSettings.ts'
+import { crc16, withCurrentModelNumber } from './radioSettings.ts'
 
 // A made-up card: five invented models in positions 1, 2, 3, 5 and 6, with position 4 empty.
 // The radio is set to the model in position 5. Each folder also has a file the app leaves alone.
@@ -37,6 +37,8 @@ const currModel = (card: Card): string | null => {
   const read = documentFromBytes(settings(card))
   return read.ok ? valueAt(read.document, 'currModel') : null
 }
+/** The bytes of the file the settings name, or nothing when they name a file that is not there. */
+const namedBySettings = (card: Card): Uint8Array | undefined => card.get(modelPath(Number(currModel(card)) + 1))
 const sameCard = (first: Card, second: Card): boolean =>
   first.size === second.size && [...first].every(([at, bytes]) => second.has(at) && sameBytes(second.get(at)!, bytes))
 /** A card with something else at a path. */
@@ -60,7 +62,8 @@ const contents = (card: Card): string[] => [...card].filter(([at]) => holdsAMode
 /**
  * What must be true of every result: the list of changes turns the old card into the new one,
  * its writes all come before its removes, no model is without a copy at any point part way
- * through, the files the app leaves alone are untouched, and the settings' checksum is right.
+ * through, the radio is never left set to the wrong model part way through, the files the app
+ * leaves alone are untouched, and the settings' checksum is right.
  */
 function done<Also>(before: Card, result: CardResult<Also>): Extract<CardResult<Also>, { ok: true }> {
   if (!result.ok) throw new Error(`refused: ${result.problem}`)
@@ -75,6 +78,17 @@ function done<Also>(before: Card, result: CardResult<Also>): Extract<CardResult<
   for (let count = 0; count <= changes.length; count += 1) {
     const partWay = contents(applyChanges(before, changes.slice(0, count)))
     for (const model of kept) expect(partWay.includes(model), `a model is lost after ${count} changes`).toBe(true)
+  }
+
+  // After each change, however far the list has got, the file the settings name holds the model
+  // the radio is meant to be set to: the one before the action, or the one after it.
+  const [was, willBe] = [namedBySettings(before), namedBySettings(after)]
+  if (was && willBe) {
+    for (let count = 0; count <= changes.length; count += 1) {
+      const named = namedBySettings(applyChanges(before, changes.slice(0, count)))
+      const right = named !== undefined && (sameBytes(named, was) || sameBytes(named, willBe))
+      expect(right, `the radio is set to the wrong model after ${count} changes`).toBe(true)
+    }
   }
 
   for (const at of readCard(before).others) {
@@ -219,8 +233,11 @@ test('deleting and closing up moves the later models up, and the radio\'s model 
   const [was, now] = [lines(settings(card)), lines(settings(gone.card))]
   expect(now.flatMap((line, index) => (line === was[index] ? [] : [index + 1]))).toEqual([1, 11])
   expect(now[0]).toMatch(/^checksum: \d+$/)
-  // The settings are the last thing written, and the old files go after that.
-  expect(writes(gone.changes).at(-1)).toBe(RADIO_SETTINGS_PATH)
+  // The settings are written straight after the file they name, before that model's old file is
+  // written over. The old files go after every write.
+  const order = writes(gone.changes)
+  expect(order[order.indexOf(RADIO_SETTINGS_PATH) - 1]).toBe('MODELS/model03.yml')
+  expect(order.indexOf('MODELS/model04.yml')).toBeGreaterThan(order.indexOf(RADIO_SETTINGS_PATH))
   expect(removes(gone.changes)).toEqual(['MODELS/model02.yml', 'MODELS/model05.yml'])
 
   // Its place has been taken since, so the models from there to the next empty place make room.
@@ -333,8 +350,8 @@ test('closing up removes every empty place with a model after it, and the radio\
   expect([current(closed.card), currModel(closed.card)]).toEqual(['Tin Snail', '3'])
   expect(closed.changes.map((change) => `${change.kind} ${change.path}`)).toEqual([
     'write MODELS/model03.yml',
-    'write MODELS/model04.yml',
     'write RADIO/radio.yml',
+    'write MODELS/model04.yml',
     'remove MODELS/model05.yml',
   ])
   expect(done(closed.card, closeUpOnCard(closed.card)).changes).toEqual([])
@@ -401,8 +418,8 @@ test('changes are listed with every write before any remove, in an order that is
   expect(models(chain.card)).toEqual(['1 Pebble', '2 Gravel Cat', '4 Tin Snail', '5 Mudskipper', '6 Bog Hopper'])
   expect(chain.changes.map((change) => `${change.kind} ${change.path}`)).toEqual([
     'write MODELS/model03.yml',
-    'write MODELS/model04.yml',
     'write RADIO/radio.yml',
+    'write MODELS/model04.yml',
     'remove MODELS/model02.yml',
   ])
 
@@ -411,4 +428,104 @@ test('changes are listed with every write before any remove, in an order that is
   const other = done(chain.card, deleteFromCard(chain.card, 1, { closeUp: true })).card
   expect(sameCard(applyChanges(card, changesBetween(card, other)), other)).toBe(true)
   expect(sameCard(applyChanges(other, changesBetween(other, card)), card)).toBe(true)
+})
+
+// The radio is never left set to the wrong model
+
+/** The made-up kind of card with the radio set to the model in another position. */
+function setTo(card: Card, position: number): Card {
+  const set = withCurrentModelNumber(settings(card), position - 1)
+  if (!set.ok) throw new Error('the settings could not be changed')
+  return withFile(card, RADIO_SETTINGS_PATH, set.bytes)
+}
+const listed = (changes: readonly Change[]): string[] => changes.map((change) => `${change.kind} ${change.path}`)
+
+test('the settings follow the radio\'s model before its old file is written over', () => {
+  // The radio is set to Tin Snail in position 5. Moving position 3 to 5 moves Tin Snail up into
+  // position 4, and puts Mudskipper in the file Tin Snail was in.
+  const card = madeUp()
+  const moved = done(card, moveOnCard(card, 3, 5))
+  expect(listed(moved.changes)).toEqual([
+    'write MODELS/model03.yml',
+    'write RADIO/radio.yml',
+    'write MODELS/model04.yml',
+    'remove MODELS/model02.yml',
+  ])
+  for (let count = 0; count <= moved.changes.length; count += 1) {
+    expect(current(applyChanges(card, moved.changes.slice(0, count))), `after ${count} changes`).toBe('Tin Snail')
+  }
+
+  // Two models that swap places, one of them the radio's. The spare copy is of the other one, so
+  // the radio's model can go to its new file, and the settings with it, before its old file is touched.
+  const onPebble = setTo(card, 1)
+  const swapped = done(onPebble, moveOnCard(onPebble, 1, 2))
+  expect(models(swapped.card).slice(0, 2)).toEqual(['1 Gravel Cat', '2 Pebble'])
+  expect(listed(swapped.changes)).toEqual([
+    'write MODELS/DELETED/0001-model01.yml',
+    'write MODELS/model01.yml',
+    'write RADIO/radio.yml',
+    'write MODELS/model00.yml',
+    'remove MODELS/DELETED/0001-model01.yml',
+  ])
+
+  // Deleting the radio's model and closing up. The file the settings name is the deleted model's,
+  // and the next model is to be written over it. That waits until the settings name the model the
+  // radio is switching to, in its new file.
+  const deleted = done(onPebble, deleteFromCard(onPebble, 1, { closeUp: true, switchTo: 3 }))
+  expect(current(deleted.card)).toBe('Mudskipper')
+  const order = listed(deleted.changes)
+  expect(order.indexOf('write MODELS/model01.yml')).toBeLessThan(order.indexOf('write RADIO/radio.yml'))
+  expect(order.indexOf('write RADIO/radio.yml')).toBeLessThan(order.indexOf('write MODELS/model00.yml'))
+  for (let count = 0; count <= deleted.changes.length; count += 1) {
+    const set = current(applyChanges(onPebble, deleted.changes.slice(0, count)))
+    expect(['Pebble', 'Mudskipper'], `after ${count} changes`).toContain(set)
+  }
+})
+
+test('wherever a list of changes stops, the settings name a file that holds the radio\'s model', () => {
+  // `done` looks at the card after every change of a list. Here it is given every list the
+  // actions can make on the made-up card, with the radio set to each model in turn.
+  let lists = 0
+  function checked<Also>(card: Card, result: CardResult<Also>): CardResult<Also> {
+    if (result.ok) {
+      done(card, result)
+      lists += 1
+    }
+    return result
+  }
+  const taken = [1, 2, 3, 5, 6]
+
+  for (const radioOn of taken) {
+    const card = setTo(madeUp(), radioOn)
+
+    // Every move of a model or of an empty place, to every other place nearby.
+    for (let from = 1; from <= 7; from += 1) {
+      for (let to = 1; to <= 7; to += 1) if (from !== to) checked(card, moveOnCard(card, from, to))
+    }
+    checked(card, closeUpOnCard(card))
+
+    // Every delete, both ways. Deleting the radio's own model switches to each other model in
+    // turn. Each deleted model is then brought back, with and without setting the radio to it.
+    for (const position of taken) {
+      for (const closeUp of [true, false]) {
+        const switchChoices = position === radioOn ? taken.filter((other) => other !== position) : [undefined]
+        for (const switchTo of switchChoices) {
+          const gone = checked(card, deleteFromCard(card, position, { closeUp, switchTo }))
+          if (!gone.ok) continue
+          for (const setRadioToIt of [false, true]) {
+            checked(gone.card, restoreOnCard(gone.card, gone.deletedPath, { setRadioToIt }))
+          }
+        }
+      }
+    }
+  }
+
+  // A card with no empty place: every move is a full circle, and a long one from end to end.
+  const full = fullCard()
+  for (const [radioOn, from, to] of [[1, 1, 60], [60, 60, 1], [30, 1, 60], [2, 1, 2], [59, 60, 59], [30, 29, 31]]) {
+    const card = setTo(full, radioOn)
+    checked(card, moveOnCard(card, from, to))
+  }
+
+  expect(lists).toBeGreaterThan(400)
 })
