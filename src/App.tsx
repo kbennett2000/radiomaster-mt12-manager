@@ -22,13 +22,7 @@ import { strings } from './strings/en.ts'
 // Connect is simulated in this cycle: after a short pause it succeeds and loads the sample data.
 const SIMULATED_CONNECT_MS = 1200
 
-interface AppProps {
-  initialState: AppState
-  /** For reviewers: a part of the first page to scroll to, when a review state is about something further down. */
-  showOnOpen?: 'radioPicture'
-}
-
-function App({ initialState, showOnOpen }: AppProps) {
+function App({ initialState }: { initialState: AppState }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const route = useHashRoute()
   const main = useRef<HTMLElement>(null)
@@ -36,10 +30,6 @@ function App({ initialState, showOnOpen }: AppProps) {
   const firstRoute = useRef(route)
 
   useEffect(() => () => window.clearTimeout(connectTimer.current), [])
-
-  useEffect(() => {
-    if (showOnOpen === 'radioPicture') document.querySelector('[data-radio-picture-section]')?.scrollIntoView()
-  }, [showOnOpen])
 
   // A new page starts at its top, and keyboard and screen reader users start at the top of it
   // too. Both happen before anything the page does for itself, so the list can still bring a newly
