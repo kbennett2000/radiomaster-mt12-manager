@@ -12,17 +12,9 @@ import type { EditPart } from './edit.ts'
 import { paths } from './useHashRoute.ts'
 import type { BuiltStepId, ModelDraft, WizardView } from './wizard.ts'
 
-export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish' | 'picture'
+export type ScenarioGroup = 'connect' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish'
 
-export const SCENARIO_GROUPS: readonly ScenarioGroup[] = [
-  'connect',
-  'models',
-  'delete',
-  'wizard',
-  'edit',
-  'finish',
-  'picture',
-]
+export const SCENARIO_GROUPS: readonly ScenarioGroup[] = ['connect', 'models', 'delete', 'wizard', 'edit', 'finish']
 
 export const SCENARIO_IDS = [
   'connect-first-visit',
@@ -109,13 +101,6 @@ export const SCENARIO_IDS = [
   'edit-bind',
   'finish-and-unplug',
   'finish-disconnected',
-  'picture-micro-b',
-  'picture-trx4',
-  'picture-trx4-22',
-  'picture-review-crawler',
-  'picture-two-switches',
-  'picture-joystick',
-  'picture-long-name',
 ] as const
 
 export type ScenarioId = (typeof SCENARIO_IDS)[number]
@@ -126,8 +111,6 @@ export interface Scenario {
   /** The page the scenario opens on. */
   path: string
   state: AppState
-  /** A part of the page to scroll to as it opens, when the scenario is about something further down. */
-  show?: 'radioPicture'
 }
 
 const after = (state: AppState, ...actions: Action[]): AppState => actions.reduce(reducer, state)
@@ -253,26 +236,6 @@ const partPage = (modelId: ModelId, part: EditPart, state = partOpen(modelId, pa
 // TRX-4 with a different receiver picked, and then saved.
 const receiverPicked = partOpen('m03', 'receiver', { type: 'editChanged', draft: { receiverTypeId: 'spektrum-dsm2' } })
 const receiverSaved = after(receiverPicked, { type: 'editSaved' })
-
-/** A scenario that opens scrolled to the picture of the radio, which is some way down its page. */
-const picture = (path: string, state: AppState): Omit<Scenario, 'id'> => ({
-  group: 'picture',
-  path,
-  state,
-  show: 'radioPicture',
-})
-
-/** The wizard's Review page, on a radio with something fitted on its base. */
-const reviewOn = (baseFitting: BaseFitting, ...extras: PickedExtra[]): AppState =>
-  after(
-    folded(
-      withExtras(
-        wizardOn('extras', withReceiver, {}, ready(SAMPLE_MODELS, SAMPLE_CURRENT_MODEL_ID, baseFitting)),
-        ...extras,
-      ),
-    ),
-    { type: 'wizardStepShown', step: 'review' },
-  )
 
 const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'connect-first-visit': { group: 'connect', path: paths.home, state: notConnected },
@@ -551,33 +514,6 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   ),
   'edit-saved-receiver': editPage('m03', receiverSaved),
   'edit-bind': { group: 'edit', path: paths.rebind('m03'), state: receiverSaved },
-
-  // The picture of the radio. Micro B uses almost nothing, and TRX-4 2-2 has a one-button preset
-  // that was made on the radio.
-  'picture-micro-b': picture(paths.editModel('m11'), ready()),
-  'picture-trx4': picture(paths.editModel('m03'), ready()),
-  'picture-trx4-22': picture(paths.editModel('m06'), ready()),
-  'picture-review-crawler': picture(paths.addStep('review'), after(fullCrawler, { type: 'wizardStepShown', step: 'review' })),
-  // One of the two switches on the base is in use. The other is not.
-  'picture-two-switches': picture(
-    paths.addStep('review'),
-    reviewOn('twoSwitches', ['twoSpeedTransmission', { control: 'SA' }], ['lights', { control: 'baseSwitchLeft' }]),
-  ),
-  // The joystick works two things, one each way.
-  'picture-joystick': picture(
-    paths.addStep('review'),
-    reviewOn('joystick', ['gyroGain', { control: 'joystickLeftRight' }], ['dragBrake', { control: 'joystickUpDown' }]),
-  ),
-  // A "Something else" with the longest name it can have, 20 characters, on the narrowest label.
-  'picture-long-name': picture(
-    paths.addStep('review'),
-    reviewOn(
-      'blankCover',
-      ['lights', { control: 'T1' }],
-      ['cruiseControl', { control: 'SD', speedControl: 'P2' }],
-      ['customExtra', { name: 'Rock light bar strip', works: 'onOff', control: 'SB' }],
-    ),
-  ),
 
   'finish-and-unplug': { group: 'finish', path: paths.finish, state: ready() },
   'finish-disconnected': { group: 'finish', path: paths.home, state: after(ready(), { type: 'disconnected' }) },
