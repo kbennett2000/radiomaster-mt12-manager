@@ -1,0 +1,31 @@
+semver: 2.10.0
+header: 
+   name: "Mudskipper"
+telemetryProtocol: 0
+trimInc: 0
+hatsMode: GLOBAL
+mixData: 
+ -
+   weight: 80
+   destCh: 0
+   srcRaw: I0
+   mltpx: ADD
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+limitData: 
+   0:
+      min: 70
+      max: -70
+      revert: 0
+      name: "STR"
+thrTraceSrc: TH
+switchWarningState: 
+moduleData: 
+   0:
+      type: TYPE_MULTIMODULE
+      subType: 11,5
+      channelsStart: 0
+      channelsCount: 8
+view: 0
+modelRegistrationID: ""

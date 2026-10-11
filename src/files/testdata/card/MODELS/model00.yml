@@ -1,0 +1,31 @@
+semver: 2.10.0
+header: 
+   name: "Pebble"
+telemetryProtocol: 0
+trimInc: 0
+hatsMode: GLOBAL
+mixData: 
+ -
+   weight: 100
+   destCh: 0
+   srcRaw: I0
+   mltpx: ADD
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+limitData: 
+   0:
+      min: 40
+      max: -40
+      revert: 0
+      name: "STR"
+thrTraceSrc: TH
+switchWarningState: 
+moduleData: 
+   0:
+      type: TYPE_MULTIMODULE
+      subType: 74,2
+      channelsStart: 0
+      channelsCount: 8
+view: 0
+modelRegistrationID: ""
