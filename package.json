@@ -9,6 +9,7 @@
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:browser": "node scripts/browser-test.mjs",
     "screenshots": "npm run build && node scripts/screenshots.mjs",
     "inspect": "node scripts/inspect.mjs",
     "preview": "vite preview"
