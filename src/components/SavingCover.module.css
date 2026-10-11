@@ -1,0 +1,15 @@
+/*
+ * The spinner and the word side by side, in the app's own dialog box, only as wide as they need.
+ * Nothing in it can be pressed, so the box itself holds the keyboard focus, and shows no ring for it.
+ */
+.cover {
+  width: max-content;
+  outline: none;
+}
+
+.cover[open] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: var(--weight-medium);
+}

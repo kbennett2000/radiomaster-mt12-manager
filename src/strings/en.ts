@@ -20,6 +20,7 @@ import type {
 } from '../domain/model.ts'
 import type { WhenDeleting } from '../domain/positions.ts'
 import type { BaseFitting, ControlId, ControlKind } from '../domain/radio.ts'
+import type { NextSave } from '../review/nextSave.ts'
 import type { EditPart } from '../state/edit.ts'
 import type { ScenarioGroup, ScenarioId } from '../state/scenarios.ts'
 import type { OfferedThrottleFeel, VehicleKind, WizardStepId } from '../state/wizard.ts'
@@ -203,9 +204,10 @@ export const strings = {
       `Your radio is full. It holds ${max} models. To add or copy one, first delete a model you no longer need.`,
   },
 
-  // "Your models" for a real card. This version only reads a card, so nothing here offers a change.
+  // A real card: "Your models", the short Edit page, and what saving to the card can say.
   card: {
-    readOnly: 'This version only reads your card. Changing it comes next.',
+    // The quiet line beside the title, where the sample list has its hint about dragging.
+    comingNext: 'Adding a model, and seeing what each model has, come next.',
     receiverNotKnown: 'A receiver type this app does not know yet',
     noName: 'No name',
     // A model whose file the reader refused. The reader's own message for the line follows it.
@@ -221,6 +223,52 @@ export const strings = {
       'The check number on the first line of your radio’s settings file does not match the rest of the file.',
     settingsCheckMissing: 'Your radio’s settings file has no check number on its first line.',
     settingsNameNoModel: 'Your radio’s settings file does not say which model your radio is set to.',
+
+    // What a model is called when the app could not read a name for it. The first is for the
+    // middle of a sentence, the second for the start of one.
+    unnamed: (position: number) => `the model in position ${position}`,
+    unnamedFirst: (position: number) => `The model in position ${position}`,
+    // In "Recently deleted", in place of a name.
+    deletedNotRead: 'A file that could not be read',
+
+    // The short Edit page.
+    restOfModel: 'The rest of this model was set up on your radio. Showing and changing it here comes next.',
+
+    saving: 'Saving…',
+    // Added to the confirmation of the first change after a Connect.
+    backupMade: 'Before changing anything, the app copied your models to the APP-BACKUPS folder on your radio.',
+    // "Saved to your radio", for a model the app has no name for.
+    saved: {
+      deletedUnnamed: (position: number) => `The model in position ${position} was deleted.`,
+      movedUnnamed: (from: number, to: number) => `The model in position ${from} moved to position ${to}.`,
+      restoredUnnamed: (position: number) => `The model is back in position ${position}.`,
+    },
+
+    // When a change was not made. Each says what happened and what to do.
+    trouble: {
+      nothingChanged: 'Nothing was changed',
+      notAllowed:
+        'Your browser was not allowed to change the files, so nothing was changed. Try again and allow it when your browser asks.',
+      cardChanged: 'Something else has changed your radio’s files since this page read them. Nothing was changed.',
+      backupFailed: 'The app could not make its backup first, so nothing was changed.',
+      // The title and the words under it read on as one message.
+      didNotFinishTitle: 'Saving did not finish',
+      didNotFinish:
+        'No model is lost: each one is still on the card, in your list or under Recently deleted. A backup from before is in the APP-BACKUPS folder.',
+      readAgain: 'Read the card again',
+      ok: 'OK',
+      // When the app itself would not make the change. One plain sentence saying why.
+      refused: {
+        checksumWrong: 'The check number in your radio’s settings file is wrong, so the app will not change that file.',
+        radioSettingsNotRead:
+          'The app could not read your radio’s settings file, so it cannot tell which model your radio is set to.',
+        switchToNeeded:
+          'Your radio is set to this model and there is no other model for it to switch to, so it cannot be deleted.',
+        modelNotRead: 'This model’s file could not be read, so it can only be moved or deleted.',
+        nameNotKept: 'Your radio cannot keep that name, so the model was not changed.',
+        notWhereExpected: 'That model is not where the app expected to find it.',
+      },
+    },
   },
 
   // What a model has, shown as short tags on its row. Steering and throttle are never tags,
@@ -368,6 +416,9 @@ export const strings = {
     tooLong: (used: number, max: number) =>
       `That name is ${used} characters long. Your radio allows ${max} at most.`,
     alreadyUsed: 'Another model already has that name. Choose a different one.',
+    // For a name going onto a real card. It says what to avoid.
+    notPlain:
+      'Your radio cannot keep that name. Use plain letters, numbers and spaces. Avoid double quotes, backslashes, accented letters and emoji.',
   },
 
   copy: {
@@ -915,6 +966,7 @@ export const strings = {
     groups: {
       connect: 'Connect',
       realCard: 'Real card',
+      cardChanges: 'Changing a real card',
       models: 'Your models',
       delete: 'Delete',
       wizard: 'Add a model',
@@ -937,6 +989,22 @@ export const strings = {
       'card-wrong-checksum': 'Wrong checksum',
       'card-no-models-folder': 'No MODELS folder',
       'card-connect-page': 'Connect, the new link',
+      'change-copy-saved': 'A copy saved',
+      'change-move-saved': 'A move saved',
+      'change-delete-closed-up': 'Deleted, closed up',
+      'change-delete-left-empty': 'Deleted, left empty',
+      'change-restored': 'A restore',
+      'change-recently-deleted': 'Two recently deleted',
+      'change-edit-page': 'The short Edit page',
+      'change-renamed': 'A rename saved',
+      'change-name-refused': 'A name refused',
+      'change-saving': 'Saving…',
+      'change-not-allowed': 'Not allowed',
+      'change-card-changed': 'The card has changed',
+      'change-backup-failed': 'The backup failed',
+      'change-did-not-finish': 'Saving stopped',
+      'change-refused': 'A change refused',
+      'change-full-card': 'A full card of 60',
       'models-20': 'The list with 20 models',
       'models-gaps': 'The list with empty places, and “Close up empty places”',
       'models-closed-up': 'After closing up empty places',
@@ -1016,5 +1084,17 @@ export const strings = {
       'finish-and-unplug': 'Before you unplug',
       'finish-disconnected': 'Disconnected',
     } satisfies Record<ScenarioId, string>,
+    // The switch that makes the next save to a made-up card go wrong.
+    nextSave: {
+      title: 'Make the next save',
+      onlyHere: 'Open one of these states first.',
+      works: 'work',
+      ways: {
+        notAllowed: 'be not allowed',
+        cardChanged: 'find the card changed',
+        backupFailed: 'fail at the backup',
+        stopsPartWay: 'stop part way',
+      } satisfies Record<Exclude<NextSave, 'neverEnds'>, string>,
+    },
   },
 } as const

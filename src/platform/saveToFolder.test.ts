@@ -395,8 +395,14 @@ test('a step that fails stops the work there, says how many steps were done, and
     const result = await saverFor(folder).save(card, move.changes)
 
     expect(result, `step ${failing + 1} failing`).toEqual({ ok: false, problem: 'stoppedPartWay', stepsDone: failing })
-    // The folder holds exactly the steps before the one that failed, and nothing was done after it.
-    expect(sameCard(cardIn(folder), applyChanges(card, move.changes.slice(0, failing)))).toBe(true)
+    // The folder holds the steps before the one that failed, and nothing was done after it.
+    const expected = new Map(applyChanges(card, move.changes.slice(0, failing)))
+    // One thing is left behind by the failed step itself. A browser makes a new file, empty, before
+    // it lets anything be written to it. So a failed write to a file that was not there leaves an
+    // empty file in its place. The saver tidies nothing up, and that includes this.
+    if (kind === 'write' && !card.has(at)) expected.set(at, new Uint8Array())
+    expect(sameCard(cardIn(folder), expected), `step ${failing + 1} failing: what the folder holds`).toBe(true)
+    expect(cardIn(folder).get('MODELS/model03.yml')?.length === 0).toBe(failing === 0)
     expect(doneToCard(folder)).toEqual(listed(move.changes.slice(0, failing)))
     // No model is lost: each one's bytes are still in some file, and the backup is from before.
     const there = [...cardIn(folder).values()]

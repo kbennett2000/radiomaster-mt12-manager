@@ -1,6 +1,6 @@
-import { useEffect, useState, type DragEvent } from 'react'
+import { useEffect } from 'react'
 import { Button, ButtonLink } from '../../components/Button.tsx'
-import { CheckIcon, GripIcon, PlusIcon } from '../../components/icons.tsx'
+import { CheckIcon, PlusIcon } from '../../components/icons.tsx'
 import { MT12 } from '../../domain/catalog.ts'
 import type { Model, ModelId } from '../../domain/model.ts'
 import { hasEmptyPlacesToCloseUp, lastTakenPosition } from '../../domain/positions.ts'
@@ -8,54 +8,14 @@ import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './ModelList.module.css'
 import { tagsFor } from './modelTags.ts'
+import { RowHandle } from './RowHandle.tsx'
 import { rowId, scrollToRow } from './rowId.ts'
+import { useRowDrag, type Draggable } from './useRowDrag.ts'
 
 const text = strings.models
 
 // How long a newly added row stays marked.
 const NEW_ROW_MARK_MS = 3000
-
-/** A row being dragged: the position it started in, and the position the pointer is over. */
-interface Drag {
-  from: number
-  over: number | null
-}
-
-/** Where the dragged row would land compared with the row under the pointer. */
-type DropSide = 'before' | 'after' | undefined
-
-/** What every row needs to be dragged and to be dropped on. */
-interface Draggable {
-  isDragging: boolean
-  dropSide: DropSide
-  onDragStart: (event: DragEvent<HTMLElement>) => void
-  onDragEnd: () => void
-  onDragOver: (event: DragEvent<HTMLLIElement>) => void
-  onDrop: (event: DragEvent<HTMLLIElement>) => void
-}
-
-interface HandleProps {
-  position: number
-  /** What dragging this handle moves, in words. */
-  title: string
-  onDragStart: (event: DragEvent<HTMLElement>) => void
-  onDragEnd: () => void
-}
-
-/** The grip and the position number at the start of a row. Dragging it moves the row. */
-function Handle({ position, title, onDragStart, onDragEnd }: HandleProps) {
-  return (
-    <span className={styles.handle} draggable title={title} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <span className={styles.grip} aria-hidden="true">
-        <GripIcon />
-      </span>
-      <span className={styles.number}>
-        <span className="visually-hidden">{text.columns.position} </span>
-        {position}
-      </span>
-    </span>
-  )
-}
 
 interface ModelRowProps extends Draggable {
   model: Model
@@ -82,7 +42,7 @@ function ModelRow({ model, isCurrent, isNew, onCopy, onMove, onDelete, ...drag }
       onDragOver={drag.onDragOver}
       onDrop={drag.onDrop}
     >
-      <Handle
+      <RowHandle
         position={model.position}
         title={text.dragHandle(model.name)}
         onDragStart={drag.onDragStart}
@@ -159,7 +119,7 @@ function EmptyRow({ position, onMove, onAdd, ...drag }: EmptyRowProps) {
       onDragOver={drag.onDragOver}
       onDrop={drag.onDrop}
     >
-      <Handle
+      <RowHandle
         position={position}
         title={text.dragEmptyHandle(position)}
         onDragStart={drag.onDragStart}
@@ -215,6 +175,7 @@ interface ModelListProps {
  *
  * Any row, a model or an empty place, can be dragged by its handle and dropped on another row.
  * Dropping on a row means "move to that row's position", which is what the Move dialog asks for.
+ * See useRowDrag.ts.
  */
 export function ModelList({
   models,
@@ -228,7 +189,7 @@ export function ModelList({
   newModelId,
   onNewModelMarked,
 }: ModelListProps) {
-  const [drag, setDrag] = useState<Drag | null>(null)
+  const draggable = useRowDrag(onMoved)
 
   useEffect(() => {
     if (!newModelId) return
@@ -240,39 +201,6 @@ export function ModelList({
   const inPlace = new Map(models.map((model) => [model.position, model]))
   const last = lastTakenPosition(models)
   const positions = Array.from({ length: last }, (_, index) => index + 1)
-
-  function draggable(position: number, label: string): Draggable {
-    // Moving down, the row lands after the one it is dropped on. Moving up, before it.
-    let dropSide: DropSide
-    if (drag && drag.over === position && position !== drag.from) {
-      dropSide = position > drag.from ? 'after' : 'before'
-    }
-    return {
-      isDragging: drag?.from === position,
-      dropSide,
-      onDragStart: (event) => {
-        event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData('text/plain', label)
-        // Show the whole row under the pointer, not just the handle.
-        const row = event.currentTarget.closest('li')
-        if (row) event.dataTransfer.setDragImage(row, event.nativeEvent.offsetX, row.offsetHeight / 2)
-        setDrag({ from: position, over: null })
-      },
-      onDragEnd: () => setDrag(null),
-      onDragOver: (event) => {
-        if (!drag) return
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
-        if (drag.over !== position) setDrag({ ...drag, over: position })
-      },
-      onDrop: (event) => {
-        if (!drag) return
-        event.preventDefault()
-        setDrag(null)
-        if (position !== drag.from) onMoved(drag.from, position)
-      },
-    }
-  }
 
   return (
     <div>

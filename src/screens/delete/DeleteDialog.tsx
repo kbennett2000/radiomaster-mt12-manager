@@ -1,16 +1,22 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../components/Button.tsx'
 import { Dialog, DialogActions } from '../../components/Dialog.tsx'
-import type { Model, ModelId } from '../../domain/model.ts'
+import type { ModelId } from '../../domain/model.ts'
 import { strings } from '../../strings/en.ts'
 import styles from './DeleteDialog.module.css'
 
+/** A model as far as this dialog needs it: what to call it, and what to give back when it is picked. */
+interface Named {
+  id: ModelId
+  name: string
+}
+
 interface DeleteDialogProps {
-  model: Model
+  model: Named
   /** What deleting will do to the rest of the list, in one plain sentence. */
   whatElseHappens: string
   /** The models the radio could switch to. Empty unless the radio is set to the model being deleted. */
-  switchChoices: readonly Model[]
+  switchChoices: readonly Named[]
   /** A model already picked to switch to. Only the review scenarios use this. */
   switchToId?: ModelId
   /** True after the person tried to delete without picking a model to switch to. */

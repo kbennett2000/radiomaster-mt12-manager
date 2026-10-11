@@ -1,77 +1,168 @@
+import { Button, ButtonLink } from '../../components/Button.tsx'
 import { CheckIcon } from '../../components/icons.tsx'
 import { MT12 } from '../../domain/catalog.ts'
 import type { CardModel, CardReading } from '../../files/card.ts'
+import { paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
+import { spokenName } from './cardWords.ts'
 import styles from './ModelList.module.css'
+import { RowHandle } from './RowHandle.tsx'
 import { placeRowId, rowId } from './rowId.ts'
+import { useRowDrag, type Draggable } from './useRowDrag.ts'
 
 const text = strings.card
-const columns = strings.models.columns
-
-/** The position number at the start of a row. There is no handle: nothing on a real card can be dragged. */
-function Place({ position }: { position: number }) {
-  return (
-    <span className={styles.handle}>
-      <span className={styles.number}>
-        <span className="visually-hidden">{columns.position} </span>
-        {position}
-      </span>
-    </span>
-  )
-}
+const say = strings.models
+const columns = say.columns
 
 function CurrentMark() {
   return (
     <span className={styles.mark}>
       <CheckIcon />
-      <span>{strings.models.currentMark}</span>
+      <span>{say.currentMark}</span>
     </span>
   )
 }
 
-function ModelRow({ model, isCurrent }: { model: CardModel; isCurrent: boolean }) {
-  const row = { id: rowId(placeRowId(model.position)), className: styles.row, tabIndex: -1 }
+interface ModelRowProps extends Draggable {
+  model: CardModel
+  isCurrent: boolean
+  onCopy: () => void
+  onMove: () => void
+  onDelete: () => void
+}
 
-  // A file the app could not read as a model still has its row, in its position.
-  if (model.name === null) {
-    const why = model.refusal ? strings.files.refused[model.refusal.reason](model.refusal.line) : text.notAModel
-    return (
-      <li {...row} data-current={isCurrent || undefined}>
-        <Place position={model.position} />
-        <p className={styles.unread}>
-          {text.fileNotRead} {why} {isCurrent && <CurrentMark />}
-        </p>
-      </li>
-    )
-  }
+function ModelRow({ model, isCurrent, onCopy, onMove, onDelete, ...drag }: ModelRowProps) {
+  const name = spokenName(model)
+  // A file the app could not read as a model still has its row. It can be moved and deleted,
+  // which only carry its bytes, but not edited or copied, which need to read it.
+  const readable = model.name !== null
+
+  const moveAndDelete = (
+    <>
+      <Button variant="quiet" size="small" aria-label={say.moveNamed(name)} onClick={onMove}>
+        {say.move}
+      </Button>
+      <Button variant="quiet" size="small" aria-label={say.deleteNamed(name)} onClick={onDelete}>
+        {say.delete}
+      </Button>
+    </>
+  )
 
   return (
-    <li {...row} data-current={isCurrent || undefined}>
-      <Place position={model.position} />
-      <h2 className={styles.name}>{model.name || text.noName}</h2>
-      <div className={styles.flow}>
-        <div className={styles.side}>
-          {/*
-           * The receiver type starts where it does in the sample list. With no buttons after it,
-           * it has their room as well, which the words for a type the app does not know need.
-           */}
-          <span className={`${styles.receiver} ${styles.receiverAlone}`} data-receiver-name>
-            <span className="visually-hidden">{columns.receiverType}: </span>
-            {model.receiverTypeId ? strings.receiverTypes[model.receiverTypeId] : text.receiverNotKnown}
-          </span>
+    <li
+      id={rowId(placeRowId(model.position))}
+      className={styles.row}
+      tabIndex={-1}
+      data-current={isCurrent || undefined}
+      data-dragging={drag.isDragging || undefined}
+      data-drop={drag.dropSide}
+      onDragOver={drag.onDragOver}
+      onDrop={drag.onDrop}
+    >
+      <RowHandle
+        position={model.position}
+        title={say.dragHandle(name)}
+        onDragStart={drag.onDragStart}
+        onDragEnd={drag.onDragEnd}
+      />
+
+      {readable ? (
+        <>
+          <h2 className={styles.name}>{model.name || text.noName}</h2>
+          <div className={styles.flow}>
+            {/* First in the row's flow, as in the sample list. It floats at the right of the first line. */}
+            <div className={styles.side}>
+              <span className={styles.receiver} data-receiver-name>
+                <span className="visually-hidden">{columns.receiverType}: </span>
+                {model.receiverTypeId ? strings.receiverTypes[model.receiverTypeId] : text.receiverNotKnown}
+              </span>
+              <div className={styles.actions}>
+                <ButtonLink
+                  variant="quiet"
+                  size="small"
+                  href={paths.editModel(placeRowId(model.position))}
+                  aria-label={say.editNamed(name)}
+                >
+                  {say.edit}
+                </ButtonLink>
+                <Button variant="quiet" size="small" aria-label={say.copyNamed(name)} onClick={onCopy}>
+                  {say.copy}
+                </Button>
+                {moveAndDelete}
+              </div>
+            </div>
+            {isCurrent && <CurrentMark />}
+          </div>
+        </>
+      ) : (
+        <div className={`${styles.flow} ${styles.unread}`}>
+          <div className={styles.side}>
+            <div className={styles.actions}>{moveAndDelete}</div>
+          </div>
+          <span className={styles.unreadWords}>
+            {text.fileNotRead}{' '}
+            {model.refusal ? strings.files.refused[model.refusal.reason](model.refusal.line) : text.notAModel}
+          </span>{' '}
+          {isCurrent && <CurrentMark />}
         </div>
-        {isCurrent && <CurrentMark />}
+      )}
+    </li>
+  )
+}
+
+interface EmptyRowProps extends Draggable {
+  position: number
+  onMove: () => void
+}
+
+/** An empty place with a model somewhere after it. It can be dragged and moved like a model. */
+function EmptyRow({ position, onMove, ...drag }: EmptyRowProps) {
+  return (
+    <li
+      className={styles.emptyRow}
+      data-dragging={drag.isDragging || undefined}
+      data-drop={drag.dropSide}
+      onDragOver={drag.onDragOver}
+      onDrop={drag.onDrop}
+    >
+      <RowHandle
+        position={position}
+        title={say.dragEmptyHandle(position)}
+        onDragStart={drag.onDragStart}
+        onDragEnd={drag.onDragEnd}
+      />
+      <span className={styles.emptyName}>{say.emptyPlace}</span>
+      <div className={styles.emptyActions}>
+        <Button variant="quiet" size="small" aria-label={say.moveEmptyNamed(position)} onClick={onMove}>
+          {say.move}
+        </Button>
       </div>
     </li>
   )
 }
 
+interface CardModelListProps {
+  /** What was read from the card. */
+  reading: CardReading
+  onCopy: (position: number) => void
+  /** The Move action was chosen on the row in this position, so the person should be asked where to. */
+  onMoveRequested: (position: number) => void
+  /** A row was dragged and dropped on another place. */
+  onMoved: (fromPosition: number, toPosition: number) => void
+  onDelete: (position: number) => void
+  /** Removes every empty place that has a model after it. */
+  onCloseUp: () => void
+}
+
 /**
  * A real card's list, one row per place, from position 1 to the last place that holds a model.
- * It shows what was read and offers no way to change it: no handles and no buttons. What the app
- * cannot yet read from a model's file, its extras and its feedback, is left out of the row.
+ * It has the sample list's handles and buttons, and works the same way. What the app cannot yet
+ * read from a model's file, its extras and its feedback, is left out of the row. Nothing is added
+ * from here yet, so an empty place has no "Add a model here".
  */
-export function CardModelList({ reading }: { reading: CardReading }) {
+export function CardModelList({ reading, onCopy, onMoveRequested, onMoved, onDelete, onCloseUp }: CardModelListProps) {
+  const draggable = useRowDrag(onMoved)
+
   const inPlace = new Map(reading.models.map((model) => [model.position, model]))
   const last = Math.max(0, ...inPlace.keys())
   const positions = Array.from({ length: last }, (_, index) => index + 1)
@@ -86,23 +177,39 @@ export function CardModelList({ reading }: { reading: CardReading }) {
             <span className={styles.receiver} aria-hidden="true">
               {columns.receiverType}
             </span>
+            {/* An empty place with a model after it is one that closing up would remove. */}
+            {last > inPlace.size && (
+              <button type="button" className={styles.closeUp} onClick={onCloseUp}>
+                {say.closeUp}
+              </button>
+            )}
           </div>
         </div>
         <ol className={styles.list}>
           {positions.map((position) => {
             const model = inPlace.get(position)
             return model ? (
-              <ModelRow key={position} model={model} isCurrent={position === reading.currentPosition} />
+              <ModelRow
+                key={position}
+                model={model}
+                isCurrent={position === reading.currentPosition}
+                {...draggable(position, spokenName(model))}
+                onCopy={() => onCopy(position)}
+                onMove={() => onMoveRequested(position)}
+                onDelete={() => onDelete(position)}
+              />
             ) : (
-              <li key={position} className={styles.emptyRow}>
-                <Place position={position} />
-                <span className={styles.emptyName}>{strings.models.emptyPlace}</span>
-              </li>
+              <EmptyRow
+                key={position}
+                position={position}
+                {...draggable(position, say.emptyPlace)}
+                onMove={() => onMoveRequested(position)}
+              />
             )
           })}
         </ol>
       </div>
-      {last < MT12.maxModels && <p className={styles.after}>{strings.models.emptyAfter(last + 1, MT12.maxModels)}</p>}
+      {last < MT12.maxModels && <p className={styles.after}>{say.emptyAfter(last + 1, MT12.maxModels)}</p>}
     </div>
   )
 }

@@ -48,12 +48,25 @@ below is a reason to change nothing.
 10. **Nothing outside the card.** A list that names a file anywhere but `MODELS`, `MODELS/DELETED` or `RADIO`
     is refused before the browser is asked anything.
 
+## How the screens use it
+
+- A change is worked out from the files the app holds, saved, and only then shown. If the save is not made,
+  the screen is left as it was and a dialog says why.
+- A screen calls the save straight from the click that asked for the change, with nothing awaited first.
+  Dropping a dragged row counted as a click in the browser I tried it in. In case a browser says it does not,
+  a drop that would be the first change opens the Move dialog on that place, and its button is the click.
+- Undo is a save like any other. It saves the card as it was before the last change, byte for byte, through
+  the same checks.
+- Reading the card again is a new start. The app drops what it held, and the next change is backed up first,
+  as the first change after a Connect is.
+
 ## How I test it
 
 - `src/platform/saveToFolder.test.ts` gives the saver a folder that exists only in memory, and makes each
   thing above fail in turn.
 - `npm run test:browser` runs the saver in a real browser, on a made-up card in the browser's private storage.
-  It carries out every action, reads the folder back, undoes the action, and reads the folder back again.
+  It carries out every action, reads the folder back, undoes the action, and reads the folder back again. It
+  then does the same through the screens, once with the mouse and once with the keyboard alone.
 
 ## Consequences
 
@@ -61,6 +74,10 @@ below is a reason to change nothing.
   card does not stop a save. It reaches the app afterwards, in the card that is read afresh.
 - After a save stops part way, the app's own picture of the card is out of date. It has to read the card again
   before it does anything more.
+- A write that fails can leave an empty file where a new file was going to be. A browser makes a new file,
+  empty, before it lets anything be written to it, and the save does not remove it, because that would be
+  tidying up. No model is lost by it. The app lists it as a file that could not be read, and it can be deleted
+  from the list.
 - An older backup that cannot be removed does not stop a save. It is tried again after the next backup.
 - A save with nothing to change asks the browser nothing and makes no backup.
 - No test here sees the browser's own question, or a folder on a real disk. Private storage needs no

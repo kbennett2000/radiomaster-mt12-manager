@@ -58,7 +58,7 @@ test('Connect asks the browser for a folder to read and nothing more, then asks 
 
   expect(screen.getByRole('heading', { level: 1, name: strings.models.title })).toBeTruthy()
   expect(screen.getByText(strings.header.connected(5, MT12.maxModels))).toBeTruthy()
-  expect(screen.getByText(strings.card.readOnly)).toBeTruthy()
+  expect(screen.getByText(strings.card.comingNext)).toBeTruthy()
   expect(screen.getByText(strings.models.currentStrip('Tin Snail', 5))).toBeTruthy()
 })
 
@@ -118,5 +118,5 @@ test('"Try it with sample models" opens the sample models, and the header says t
   expect(main.getAllByRole('heading', { level: 2 })).toHaveLength(20)
   expect(main.getByRole('link', { name: strings.models.addModel })).toBeTruthy()
   expect(main.getByRole('button', { name: strings.models.deleteNamed(SAMPLE_MODELS[0].name) })).toBeTruthy()
-  expect(main.queryByText(strings.card.readOnly)).toBeNull()
+  expect(main.queryByText(strings.card.comingNext)).toBeNull()
 })

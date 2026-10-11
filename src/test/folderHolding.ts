@@ -143,9 +143,12 @@ export function folderHolding(files: Card, unreadable: readonly string[] = []): 
       },
       getFileHandle: async (name, options) => {
         if (tree.folders.has(name)) throw problem('TypeMismatchError', `${prefix}${name}`)
-        if (!tree.files.has(name) && !options?.create) throw problem('NotFoundError', `${prefix}${name}`)
-        // A real handle makes an empty file here. This one waits until something is written,
-        // which no test can tell apart, since every file that is made is written at once.
+        if (!tree.files.has(name)) {
+          if (!options?.create) throw problem('NotFoundError', `${prefix}${name}`)
+          // As in the browser, asking for a file that is not there makes an empty one at once,
+          // before anything is written to it.
+          tree.files.set(name, new Uint8Array())
+        }
         return fileAt(tree, name, `${prefix}${name}`)
       },
       removeEntry: async (name, options) => {

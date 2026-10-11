@@ -30,7 +30,8 @@ interface RowProps {
   children: ReactNode
 }
 
-function Row({ label, change, note, children }: RowProps) {
+/** One answer on a row: what it is, what it is set to, and a way to change it or a note in its place. */
+export function SummaryRow({ label, change, note, children }: RowProps) {
   return (
     <div className={styles.row}>
       <dt className={styles.label}>{label}</dt>
@@ -83,37 +84,37 @@ export function ModelSummary({ draft, changeLink, positionNote, extrasLink, othe
 
   return (
     <dl className={styles.summary}>
-      <Row label={text.rows.name} change={changeLink('name')}>
+      <SummaryRow label={text.rows.name} change={changeLink('name')}>
         {draft.name.trim()}
-      </Row>
-      <Row label={text.rows.position} note={positionNote}>
+      </SummaryRow>
+      <SummaryRow label={text.rows.position} note={positionNote}>
         {draft.position}
-      </Row>
-      <Row label={text.rows.receiver} change={changeLink('receiver')}>
+      </SummaryRow>
+      <SummaryRow label={text.rows.receiver} change={changeLink('receiver')}>
         {draft.receiverTypeId ? strings.receiverTypes[draft.receiverTypeId] : null}
-      </Row>
-      <Row label={text.rows.steering} change={changeLink('steeringThrottle')}>
+      </SummaryRow>
+      <SummaryRow label={text.rows.steering} change={changeLink('steeringThrottle')}>
         <span>{text.direction[draft.steeringDirection]}</span>
         <span>{text.travel(draft.steeringTravel, draft.vehicleKind)}</span>
-      </Row>
-      <Row label={text.rows.throttle} change={changeLink('steeringThrottle')}>
+      </SummaryRow>
+      <SummaryRow label={text.rows.throttle} change={changeLink('steeringThrottle')}>
         <span>{text.direction[draft.throttleDirection]}</span>
         <span>{text.feel[throttleFeelOf(draft)]}</span>
         <span>{text.topSpeed(draft.topSpeed)}</span>
-      </Row>
+      </SummaryRow>
       {draft.extras.length === 0 && (
-        <Row label={text.extrasLabel} change={extrasLink ? undefined : changeLink('extras')}>
+        <SummaryRow label={text.extrasLabel} change={extrasLink ? undefined : changeLink('extras')}>
           {extrasLink ? <span className={styles.stacked}>{text.extrasNone}</span> : text.extrasNone}
           {extrasLink && <span className={styles.underAnswer}>{extrasLink}</span>}
-        </Row>
+        </SummaryRow>
       )}
       {/* "Change" beside an extra opens that extra's own questions, not the folded list. */}
       {draft.extras.map((extra) => (
-        <Row key={extra.id} label={extraName(extra)} change={changeLink('extras', extra.id)}>
+        <SummaryRow key={extra.id} label={extraName(extra)} change={changeLink('extras', extra.id)}>
           {extra.control && <span>{strings.controls[extra.control]}</span>}
           {extra.speedControl && <span>{strings.controls[extra.speedControl]}</span>}
           {extra.port !== null && <span>{text.port(extra.port)}</span>}
-        </Row>
+        </SummaryRow>
       ))}
       {draft.extras.length > 0 && extrasLink && (
         <div className={styles.linkRow}>
@@ -121,7 +122,7 @@ export function ModelSummary({ draft, changeLink, positionNote, extrasLink, othe
           <dd className={styles.linkCell}>{extrasLink}</dd>
         </div>
       )}
-      <Row label={text.feedbackLabel} change={changeLink('feedback')}>
+      <SummaryRow label={text.feedbackLabel} change={changeLink('feedback')}>
         {noFeedback && text.feedbackNone}
         {otherFeedback && <span>{otherFeedback}</span>}
         {draft.lightColour !== null && (
@@ -130,7 +131,7 @@ export function ModelSummary({ draft, changeLink, positionNote, extrasLink, othe
         {withFeedback.map((extra) => (
           <span key={extra.id}>{feedbackWords(extra)}</span>
         ))}
-      </Row>
+      </SummaryRow>
     </dl>
   )
 }

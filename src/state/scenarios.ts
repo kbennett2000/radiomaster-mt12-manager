@@ -7,16 +7,19 @@ import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from '../sample/sampleModels.t
 import type { ExtraAnswers, ExtraKind } from '../domain/extras.ts'
 import type { ExtraFeedback, Model, ModelId } from '../domain/model.ts'
 import type { BaseFitting } from '../domain/radio.ts'
+import type { NextSave } from '../review/nextSave.ts'
 import { initialState, reducer, type Action, type AppState } from './appState.ts'
+import type { CardStep } from './cardChanges.ts'
 import type { EditPart } from './edit.ts'
 import { paths } from './useHashRoute.ts'
 import type { BuiltStepId, ModelDraft, WizardView } from './wizard.ts'
 
-export type ScenarioGroup = 'connect' | 'realCard' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish'
+export type ScenarioGroup = 'connect' | 'realCard' | 'cardChanges' | 'models' | 'delete' | 'wizard' | 'edit' | 'finish'
 
 export const SCENARIO_GROUPS: readonly ScenarioGroup[] = [
   'connect',
   'realCard',
+  'cardChanges',
   'models',
   'delete',
   'wizard',
@@ -37,6 +40,8 @@ export type ReviewCard =
   | 'unreadableModel'
   | 'wrongChecksum'
   | 'noModelsFolder'
+  | 'twoDeleted'
+  | 'fullCard'
 
 export const SCENARIO_IDS = [
   'connect-first-visit',
@@ -53,6 +58,22 @@ export const SCENARIO_IDS = [
   'card-wrong-checksum',
   'card-no-models-folder',
   'card-connect-page',
+  'change-copy-saved',
+  'change-move-saved',
+  'change-delete-closed-up',
+  'change-delete-left-empty',
+  'change-restored',
+  'change-recently-deleted',
+  'change-edit-page',
+  'change-renamed',
+  'change-name-refused',
+  'change-saving',
+  'change-not-allowed',
+  'change-card-changed',
+  'change-backup-failed',
+  'change-did-not-finish',
+  'change-refused',
+  'change-full-card',
   'models-20',
   'models-gaps',
   'models-closed-up',
@@ -144,6 +165,10 @@ export interface Scenario {
   state: AppState
   /** A made-up card the app opens as soon as it starts, as if its folder had just been picked. */
   card?: ReviewCard
+  /** What is done to that card once it is open, in order, by the same code a click runs. */
+  steps?: readonly CardStep[]
+  /** A way the first save to that card is made to go wrong. */
+  nextSave?: NextSave
 }
 
 const after = (state: AppState, ...actions: Action[]): AppState => actions.reduce(reducer, state)
@@ -159,6 +184,27 @@ const realCard = (card: ReviewCard): Omit<Scenario, 'id'> => ({
   state: aboutToOpenCard,
   card,
 })
+
+/**
+ * A change to a made-up card. The card is opened and the steps are saved to it for real, in the
+ * browser's private storage, so the state a reviewer lands on is one the saving code produced.
+ */
+const cardChange = (
+  steps: readonly CardStep[],
+  rest: Partial<Pick<Scenario, 'card' | 'path' | 'state' | 'nextSave'>> = {},
+): Omit<Scenario, 'id'> => ({
+  group: 'cardChanges',
+  path: paths.home,
+  state: aboutToOpenCard,
+  card: 'madeUp',
+  steps,
+  ...rest,
+})
+
+// On the made-up card, Pebble is in position 1, Gravel Cat in 2, Mudskipper in 3, position 4 is
+// empty, and the radio is set to Tin Snail in position 5. A real card names a model by its place.
+const pebble = 'place-1'
+const aCopy: CardStep = { kind: 'copy', position: 2, name: 'Shingle' }
 
 const justConnected = (models: readonly Model[], currentModelId: ModelId | null): AppState =>
   after(notConnected, { type: 'connectSucceeded', models, currentModelId })
@@ -300,6 +346,36 @@ const details: Record<ScenarioId, Omit<Scenario, 'id'>> = {
   'card-wrong-checksum': realCard('wrongChecksum'),
   'card-no-models-folder': realCard('noModelsFolder'),
   'card-connect-page': { group: 'realCard', path: paths.home, state: notConnected },
+
+  'change-copy-saved': cardChange([aCopy]),
+  // The radio's model is one of those that moves, so the strip and the settings follow it.
+  'change-move-saved': cardChange([{ kind: 'move', from: 3, to: 5 }]),
+  'change-delete-closed-up': cardChange([{ kind: 'delete', position: 2 }]),
+  'change-delete-left-empty': cardChange([{ kind: 'delete', position: 2 }], {
+    state: { ...aboutToOpenCard, whenDeleting: 'leaveEmpty' },
+  }),
+  'change-restored': cardChange([{ kind: 'delete', position: 2 }, { kind: 'restoreNewest' }]),
+  'change-recently-deleted': cardChange([], { card: 'twoDeleted' }),
+  'change-edit-page': cardChange([], { path: paths.editModel(pebble) }),
+  'change-renamed': cardChange([{ kind: 'rename', position: 1, name: 'Boulder' }], { path: paths.editModel(pebble) }),
+  // A name with a character the radio's file cannot keep, typed and then "Save changes" pressed.
+  'change-name-refused': cardChange(
+    [
+      { kind: 'show', action: { type: 'cardEditOpened', position: 1 } },
+      { kind: 'show', action: { type: 'cardEditChanged', name: 'Café' } },
+      { kind: 'show', action: { type: 'cardEditTried' } },
+    ],
+    { path: paths.editPart(pebble, 'name') },
+  ),
+  'change-saving': cardChange([aCopy], { nextSave: 'neverEnds' }),
+  'change-not-allowed': cardChange([aCopy], { nextSave: 'notAllowed' }),
+  'change-card-changed': cardChange([aCopy], { nextSave: 'cardChanged' }),
+  'change-backup-failed': cardChange([aCopy], { nextSave: 'backupFailed' }),
+  // A move is several changes, so it can stop with some of them made.
+  'change-did-not-finish': cardChange([{ kind: 'move', from: 3, to: 5 }], { nextSave: 'stopsPartWay' }),
+  // The settings file has a wrong check number, and moving the radio's model would have to change that file.
+  'change-refused': cardChange([{ kind: 'move', from: 5, to: 1 }], { card: 'wrongChecksum' }),
+  'change-full-card': cardChange([], { card: 'fullCard' }),
 
   'models-20': { group: 'models', path: paths.home, state: ready() },
   'models-gaps': { group: 'models', path: paths.home, state: arrivedWithGaps },

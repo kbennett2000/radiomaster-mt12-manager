@@ -5,8 +5,8 @@
 // It serves the built site, reads the list of states from the reviewer panel, and saves the states
 // that are new or changed in this cycle, at two window sizes:
 //
-//   docs/screenshots/cycle-10/        at 1440x900
-//   docs/screenshots/cycle-10-1024/   at 1024x768
+//   docs/screenshots/cycle-11/        at 1440x900
+//   docs/screenshots/cycle-11-1024/   at 1024x768
 //
 // A page taller than the window also gets a "-full" picture of the whole page. It only ever
 // writes into those two folders. Pictures from earlier cycles are left alone.
@@ -17,9 +17,8 @@
 //
 // The script fails if a banned word shows up, a page overflows sideways, or the page reports an
 // error. On the list of 20 models it also fails if the list grows taller than its target, a row
-// runs past two lines at 1440px, or a receiver name or an action is cut short. On a real card's
-// list it fails if the page holds a button or anything that can be dragged, because this version
-// only reads a card.
+// runs past two lines at 1440px, or a receiver name or an action is cut short. On a state that
+// should show a real card's list it fails if the list is not there.
 
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
@@ -29,14 +28,9 @@ import { preview } from 'vite'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// The states to save in this cycle: every "Real card" state, and the states that changed. Those
-// are the pages with new or reworded help, the Connect page after unplugging, which has the new
-// link, and the list of 20 sample models, for the header. The open reviewer panel is always saved
-// as well.
+// The states to save in this cycle: every "Real card" state, which now has the list's buttons, and
+// every state of changing a real card. The open reviewer panel is always saved as well.
 const STATES = [
-  'connect-browser-not-supported',
-  'connect-wrong-folder',
-  'connect-open-files-coming-next',
   'card-made-up',
   'card-20-models',
   'card-empty-place',
@@ -45,23 +39,32 @@ const STATES = [
   'card-wrong-checksum',
   'card-no-models-folder',
   'card-connect-page',
-  'models-20',
-  'finish-disconnected',
+  'change-copy-saved',
+  'change-move-saved',
+  'change-delete-closed-up',
+  'change-delete-left-empty',
+  'change-restored',
+  'change-recently-deleted',
+  'change-edit-page',
+  'change-renamed',
+  'change-name-refused',
+  'change-saving',
+  'change-not-allowed',
+  'change-card-changed',
+  'change-backup-failed',
+  'change-did-not-finish',
+  'change-refused',
+  'change-full-card',
 ]
 
-// The "Real card" states that end on the card's list. Nothing on that page may change the card.
-const READ_ONLY_LISTS = [
-  'card-made-up',
-  'card-20-models',
-  'card-empty-place',
-  'card-unknown-receiver',
-  'card-unreadable-model',
-  'card-wrong-checksum',
-]
+// The states that end on a real card's list. If the list is not there, the card did not open.
+const CARD_LISTS = STATES.filter(
+  (id) => !['card-no-models-folder', 'card-connect-page', 'change-edit-page', 'change-renamed', 'change-name-refused'].includes(id),
+)
 
 const SETS = [
-  { dir: 'docs/screenshots/cycle-10', width: 1440, height: 900 },
-  { dir: 'docs/screenshots/cycle-10-1024', width: 1024, height: 768 },
+  { dir: 'docs/screenshots/cycle-11', width: 1440, height: 900 },
+  { dir: 'docs/screenshots/cycle-11-1024', width: 1024, height: 768 },
 ]
 
 // A font that is wider than the one the app uses here, forced on the page for one picture only.
@@ -86,14 +89,6 @@ function readRowsRunningOver() {
       return [...row.querySelectorAll('a, button')].some((action) => action.getBoundingClientRect().right > edge)
     })
     .map((row) => row.querySelector('h2')?.textContent ?? '')
-}
-
-/** Runs in the page: everything on the page that could change something, as short descriptions. */
-function readWaysToChange() {
-  const main = document.querySelector('main')
-  const buttons = [...main.querySelectorAll('button, input, select, textarea, [role="button"]')]
-  const draggable = [...main.querySelectorAll('[draggable="true"]')]
-  return [...buttons, ...draggable].map((element) => `${element.tagName.toLowerCase()} "${element.textContent.trim()}"`)
 }
 
 /** Runs in the page: how wide a few words are in the page's font, in pixels. */
@@ -217,13 +212,8 @@ async function saveSet(browser, baseUrl, set) {
     for (const name of await page.evaluate(readRowsRunningOver)) {
       problems.push(`${scenario.name}: the actions on the row for ${name} are cut off at ${set.width}px`)
     }
-    if (READ_ONLY_LISTS.includes(scenario.id)) {
-      if ((await page.locator('main ol > li').count()) === 0) {
-        problems.push(`${scenario.name}: the card's list did not come up`)
-      }
-      for (const way of await page.evaluate(readWaysToChange)) {
-        problems.push(`${scenario.name}: a real card's page has something that changes things: ${way}`)
-      }
+    if (CARD_LISTS.includes(scenario.id) && (await page.locator('main ol > li').count()) === 0) {
+      problems.push(`${scenario.name}: the card's list did not come up`)
     }
     await page.screenshot({ path: path.join(outDir, `${scenario.name}.png`) })
     saved++

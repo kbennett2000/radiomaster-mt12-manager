@@ -14,6 +14,8 @@ interface ModelNameFieldProps {
   onChange: (name: string) => void
   /** Names already on the radio. A new model may not reuse one. */
   namesInUse: readonly string[]
+  /** True for a name going onto a real card, which can only hold plain characters. */
+  plainOnly?: boolean
   /** What to say when the name is empty. */
   emptyMessage: string
   /** True once the person has tried to carry on. An empty name is only pointed out after that. */
@@ -38,6 +40,7 @@ export function ModelNameField({
   value,
   onChange,
   namesInUse,
+  plainOnly = false,
   emptyMessage,
   tried,
   inputRef,
@@ -49,7 +52,7 @@ export function ModelNameField({
   const problemId = useId()
 
   const used = value.trim().length
-  const problem = checkModelName(value, namesInUse)
+  const problem = checkModelName(value, namesInUse, { plainOnly })
   const shownProblem = problem === 'empty' && !tried ? null : problem
 
   const labelElement = (
@@ -81,6 +84,7 @@ export function ModelNameField({
       <div className={styles.below}>
         <p id={problemId} className={styles.problem} role="alert">
           {shownProblem === 'empty' && emptyMessage}
+          {shownProblem === 'notPlain' && text.notPlain}
           {shownProblem === 'tooLong' && text.tooLong(used, maxLength)}
           {shownProblem === 'alreadyUsed' && text.alreadyUsed}
         </p>

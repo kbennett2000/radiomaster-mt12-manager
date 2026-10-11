@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import type { Model } from '../../domain/model.ts'
 import { strings } from '../../strings/en.ts'
 import wizardStyles from '../addModel/AddModelScreen.module.css'
 import styles from './EditModel.module.css'
@@ -7,7 +6,8 @@ import styles from './EditModel.module.css'
 const text = strings.editModel
 
 interface EditFrameProps {
-  model: Model
+  /** The model the page is about: what it is called and where it is. */
+  model: { name: string; position: number }
   /** True when the radio is set to this model. */
   isCurrent: boolean
   children: ReactNode

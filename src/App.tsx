@@ -2,8 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState }
 import styles from './App.module.css'
 import { Header } from './components/Header.tsx'
 import { MT12 } from './domain/catalog.ts'
+import { connectTo, type CardConnection } from './platform/cardConnection.ts'
 import { pickFolderToRead } from './platform/pickFolder.ts'
-import { readRadioFolder, type FolderToRead } from './platform/radioFolder.ts'
 import { ReviewerPanel } from './review/ReviewerPanel.tsx'
 import { SAMPLE_CURRENT_MODEL_ID, SAMPLE_MODELS } from './sample/sampleModels.ts'
 import { AddModelScreen } from './screens/addModel/AddModelScreen.tsx'
@@ -13,30 +13,43 @@ import { EditPartScreen } from './screens/editModel/EditPartScreen.tsx'
 import { EditScreen } from './screens/editModel/EditScreen.tsx'
 import { RebindScreen } from './screens/editModel/RebindScreen.tsx'
 import { FinishScreen } from './screens/finish/FinishScreen.tsx'
-import { CardModelsScreen } from './screens/models/CardModelsScreen.tsx'
+import { CardScreens } from './screens/card/CardScreens.tsx'
+import { useCardActions } from './screens/card/useCardActions.ts'
 import { ModelsScreen } from './screens/models/ModelsScreen.tsx'
 import { ComingNextScreen } from './screens/placeholder/ComingNextScreen.tsx'
 import { RadioSetupScreen } from './screens/radioSetup/RadioSetupScreen.tsx'
 import { isReady, modelCountOf, reducer, type AppState } from './state/appState.ts'
+import type { CardStep } from './state/cardChanges.ts'
+import { cardReducer, cardStateFor } from './state/cardState.ts'
 import { partHasChanges } from './state/edit.ts'
 import { goTo, paths, redirectTo, useHashRoute } from './state/useHashRoute.ts'
 import { strings } from './strings/en.ts'
 
-interface AppProps {
-  initialState: AppState
-  /**
-   * For reviewers only: gives a folder to open as soon as the app starts, as if the person had
-   * just picked it. It is how a made-up card is looked at without the folder picker.
-   */
-  openAtStart?: () => Promise<FolderToRead>
+/** For reviewers only: a made-up card to open as soon as the app starts, and what to do to it. */
+export interface AtStart {
+  /** Gives the card, as if the person had just picked its folder. */
+  connect: () => Promise<CardConnection>
+  /** What to do to it, in order, by the same code a click runs. */
+  steps?: readonly CardStep[]
+  /** True when the last step's save is one that never ends, so the app should not wait for it. */
+  lastStepNeverEnds?: boolean
 }
 
-function App({ initialState, openAtStart }: AppProps) {
+interface AppProps {
+  initialState: AppState
+  /** For reviewers only. It is how a made-up card is looked at without the folder picker. */
+  atStart?: AtStart
+}
+
+function App({ initialState, atStart }: AppProps) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const route = useHashRoute()
   const main = useRef<HTMLElement>(null)
   const firstRoute = useRef(route)
-  const [openingAtStart, setOpeningAtStart] = useState(openAtStart !== undefined)
+  const [openingAtStart, setOpeningAtStart] = useState(atStart !== undefined)
+  // The folder the real card was read from. Saving goes to it, and to nowhere else.
+  const connection = useRef<CardConnection | null>(null)
+  const cardActions = useCardActions(connection, dispatch, state.whenDeleting)
 
   // A new page starts at its top, and keyboard and screen reader users start at the top of it
   // too. Both happen before anything the page does for itself, so the list can still bring a newly
@@ -47,19 +60,23 @@ function App({ initialState, openAtStart }: AppProps) {
     main.current?.focus({ preventScroll: true })
   }, [route])
 
-  // Reads a folder as the radio's card. A folder the person picked and a reviewer's made-up one
-  // both come through here, and through nothing else. This version only reads the card.
-  const openFolder = useCallback(async (folder: FolderToRead) => {
-    const read = await readRadioFolder(folder)
-    dispatch(read.ok ? { type: 'cardConnected', reading: read.reading } : { type: 'wrongFolderPicked' })
+  // Reads a card for the first time. A folder the person picked and a reviewer's made-up one
+  // both come through here, and through nothing else. Gives the card's files, or null when the
+  // folder is not a card.
+  const open = useCallback(async (card: CardConnection) => {
+    const read = await card.read()
+    connection.current = read.ok ? card : null
+    dispatch(read.ok ? { type: 'cardConnected', files: read.card } : { type: 'wrongFolderPicked' })
+    return read.ok ? read.card : null
   }, [])
 
   // Connect: the browser's own folder picker, asked to read and nothing more. If it is closed
-  // without a folder being chosen, the page goes back to how it was and says nothing.
+  // without a folder being chosen, the page goes back to how it was and says nothing. The browser
+  // is asked about changing files later, on the first change.
   async function connect() {
     dispatch({ type: 'connectStarted' })
     const folder = await pickFolderToRead()
-    if (folder) await openFolder(folder)
+    if (folder) await open(connectTo(folder))
     else dispatch({ type: 'connectCancelled' })
   }
 
@@ -68,14 +85,35 @@ function App({ initialState, openAtStart }: AppProps) {
     dispatch({ type: 'connectSucceeded', models: SAMPLE_MODELS, currentModelId: SAMPLE_CURRENT_MODEL_ID })
   }
 
-  // A reviewer's made-up card is opened once, when the app starts. While that is going on the
-  // page says so on <main>, which is what the picture script waits for.
+  // A reviewer's made-up card is opened once, when the app starts, and its steps are carried out
+  // by the same code a click runs. While that is going on the page says so on <main>, which is
+  // what the picture script waits for.
+  const { perform } = cardActions
   useEffect(() => {
-    if (!openAtStart) return
+    if (!atStart) return
     let left = false
+    const { connect: connectAtStart, steps = [], lastStepNeverEnds = false } = atStart
+
+    async function openAndDo() {
+      const files = await open(await connectAtStart())
+      if (!files) return
+      // The card as the screen has it, kept in step here so each step starts from the one before.
+      let card = cardStateFor(files)
+      for (const [index, step] of steps.entries()) {
+        if (left) return
+        if (step.kind === 'show') {
+          dispatch(step.action)
+          card = cardReducer(card, step.action)
+          continue
+        }
+        const act = step.kind === 'restoreNewest' ? { kind: 'restore' as const, path: card.reading.deleted[0]?.path ?? '' } : step
+        if (lastStepNeverEnds && index === steps.length - 1) void perform(act, card)
+        else card = await perform(act, card)
+      }
+    }
+
     dispatch({ type: 'connectStarted' })
-    openAtStart()
-      .then((folder) => (left ? undefined : openFolder(folder)))
+    openAndDo()
       .catch((error: unknown) => {
         console.error(error)
         if (!left) dispatch({ type: 'connectCancelled' })
@@ -86,10 +124,10 @@ function App({ initialState, openAtStart }: AppProps) {
     return () => {
       left = true
     }
-  }, [openAtStart, openFolder])
+  }, [atStart, open, perform])
 
   const ready = isReady(state)
-  // What was read from a real card, once the app is ready to show it. Null for the sample models.
+  // The real card, once the app is ready to show it. Null for the sample models.
   const card = ready ? state.card : null
   const text = strings.comingNext
   const wizard = ready ? state.wizard : null
@@ -228,10 +266,13 @@ function App({ initialState, openAtStart }: AppProps) {
     )
   } else if (card) {
     screen = (
-      <CardModelsScreen
-        reading={card}
+      <CardScreens
+        card={card}
+        route={route}
+        whenDeleting={state.whenDeleting}
         notice={state.notice}
-        onNoticeDismissed={() => dispatch({ type: 'noticeDismissed' })}
+        dispatch={dispatch}
+        actions={cardActions}
       />
     )
   } else {
