@@ -3,8 +3,9 @@
 //
 // The browser keeps a private storage for each site, which no other site and no other program can
 // see. A reviewer's link writes one of the made-up cards there and gives back that folder's handle.
-// The app then reads it with the same code that reads a folder a person picked. This file is the
-// only place in the app that writes a file, and it can only write into that private storage.
+// The app then reads it with the same code that reads a folder a person picked. This file writes
+// the made-up card there, and it can only write into that private storage. A folder a person
+// picked is written by src/platform/saveToFolder.ts and by nothing else.
 
 import type { ReviewCard } from '../state/scenarios.ts'
 import { reviewCard } from './reviewCards.ts'
