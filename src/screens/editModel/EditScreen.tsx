@@ -8,7 +8,13 @@ import { isEditChange, type Action, type Notice as Change } from '../../state/ap
 import { draftFrom, type EditPart } from '../../state/edit.ts'
 import { goTo, paths } from '../../state/useHashRoute.ts'
 import { strings } from '../../strings/en.ts'
-import { ControlsSection, ModelSummary, PortsSection, type ChangeLink } from '../addModel/ModelSummary.tsx'
+import {
+  ControlsSection,
+  ModelSummary,
+  PictureSection,
+  PortsSection,
+  type ChangeLink,
+} from '../addModel/ModelSummary.tsx'
 import summaryStyles from '../addModel/ReviewStep.module.css'
 import { EditFrame } from './EditFrame.tsx'
 import styles from './EditModel.module.css'
@@ -95,6 +101,7 @@ export function EditScreen({ model, isCurrent, baseFitting, notice, dispatch }: 
         </section>
       )}
 
+      <PictureSection features={model.features} baseFitting={baseFitting} heading="h2" />
       <ControlsSection features={model.features} baseFitting={baseFitting} heading="h2" />
       <PortsSection features={model.features} heading="h2" />
 

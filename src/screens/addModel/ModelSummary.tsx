@@ -3,6 +3,7 @@
 // added, and the Edit page shows them for one that is already on the radio.
 
 import type { MouseEventHandler, ReactNode } from 'react'
+import { RadioPicture } from '../../components/RadioPicture.tsx'
 import { colourStatesOf, switches, type ExtraAnswers } from '../../domain/extras.ts'
 import { coloursIn, givesFeedback } from '../../domain/feedback.ts'
 import type { Feature } from '../../domain/model.ts'
@@ -138,6 +139,26 @@ export function ModelSummary({ draft, changeLink, positionNote, extrasLink, othe
 interface SectionProps {
   /** The level of the section's heading, which depends on the page it sits on. */
   heading: 'h2' | 'h3'
+}
+
+/**
+ * The radio itself, with a label on every control saying what it does on the model. It sits
+ * directly above the list of controls, which says the same in words.
+ */
+export function PictureSection({
+  features,
+  baseFitting,
+  heading: Heading,
+}: SectionProps & { features: readonly Feature[]; baseFitting: BaseFitting | null }) {
+  return (
+    <section className={styles.section} data-radio-picture-section>
+      <Heading className={styles.sectionTitle}>{text.pictureTitle}</Heading>
+      <p className={styles.help}>{text.pictureHelp}</p>
+      <div className={styles.picture}>
+        <RadioPicture controls={whatEachControlDoes(features, baseFitting)} baseFitting={baseFitting} />
+      </div>
+    </section>
+  )
 }
 
 /** Every control on the radio, with what each does on the model. */

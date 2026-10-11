@@ -113,5 +113,15 @@
   --setting-words-width: 25rem;
   --setting-control-width: 19rem;
   --review-label-width: 12rem;
+  /*
+   * The picture of the radio is drawn on a grid of units, 300 across. A unit is at least one
+   * pixel at the usual text size, and grows a little where the page has room to spare, once a
+   * column of labels on each side has the width it needs. One drawing with its labels needs the
+   * last width here before two can sit side by side.
+   */
+  --radio-picture-unit-least: 0.0625rem;
+  --radio-picture-unit-most: 0.08rem;
+  --radio-picture-labels-least: 22rem;
+  --radio-picture-view-least: 34rem;
   --review-panel-width: 80rem;
 }

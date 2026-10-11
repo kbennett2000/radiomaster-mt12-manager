@@ -253,6 +253,29 @@ export const strings = {
     joystickUpDown: 'Joystick up and down',
   } satisfies Record<ControlId, string>,
 
+  // The name printed on the radio beside each control, which is how the picture labels it. Nothing
+  // is printed on the wheel or the trigger. The names for the controls a base fitting adds are
+  // placeholders: I have not checked them against a real radio with these fitted.
+  controlMarks: {
+    wheel: null,
+    trigger: null,
+    SA: 'SA',
+    SB: 'SB',
+    SC: 'SC',
+    SD: 'SD',
+    P1: 'P1',
+    P2: 'P2',
+    T1: 'T1',
+    T2: 'T2',
+    T3: 'T3',
+    T4: 'T4',
+    T5: 'T5',
+    baseSwitchLeft: 'Left switch',
+    baseSwitchRight: 'Right switch',
+    joystickLeftRight: 'Joystick, left and right',
+    joystickUpDown: 'Joystick, up and down',
+  } satisfies Record<ControlId, string | null>,
+
   controlKinds: {
     wheel: 'steers',
     trigger: 'drives',
@@ -647,6 +670,15 @@ export const strings = {
       extrasNone: 'None',
       extrasLabel: 'Extras',
       port: (port: number) => `Port ${port}`,
+      // The labeled picture of the radio, above the list of controls.
+      pictureTitle: 'Where each control is',
+      pictureHelp: 'Your radio, with what each control does on this model. The list below says the same in words.',
+      // What a screen reader calls the picture. The list under it carries the detail.
+      pictureName: 'A drawing of your radio, with a label on each control',
+      // The small second view shows the side that faces away from the driver.
+      pictureOtherSide: 'The other side, where the trigger is',
+      // A label on the picture: the name printed by the control, then its job, as in "SA · Lights".
+      pictureLabelJoin: ' · ',
       controlsTitle: 'What each control does',
       controlsHelp: 'Every control on your radio, and what it does on this model.',
       notUsed: 'Not used',
@@ -784,6 +816,9 @@ export const strings = {
       leave: 'Leave',
     },
 
+    // On the Extras page. The wizard's own help text talks about skipping a step, which does not fit here.
+    extrasHelp: 'Tick what your vehicle has. Untick anything it no longer has.',
+
     // Said under the receiver list once a different receiver is picked.
     bindAgainWarning: 'After you change the receiver, you will need to bind it again.',
 
@@ -874,6 +909,7 @@ export const strings = {
       wizard: 'Add a model',
       edit: 'Edit a model',
       finish: 'Finish and unplug',
+      picture: 'The radio picture',
     } satisfies Record<ScenarioGroup, string>,
     scenarios: {
       'connect-first-visit': 'First visit',
@@ -958,6 +994,13 @@ export const strings = {
       'edit-saved': 'After a save, with Undo',
       'edit-saved-receiver': 'After a receiver change',
       'edit-bind': 'Bind your receiver',
+      'picture-micro-b': 'Micro B: mostly unused',
+      'picture-trx4': 'TRX-4',
+      'picture-trx4-22': 'TRX-4 2-2, with a preset',
+      'picture-review-crawler': 'Review: a full crawler',
+      'picture-two-switches': 'Two switches fitted',
+      'picture-joystick': 'The joystick fitted',
+      'picture-long-name': 'A 20-character name',
       'finish-and-unplug': 'Before you unplug',
       'finish-disconnected': 'Disconnected',
     } satisfies Record<ScenarioId, string>,

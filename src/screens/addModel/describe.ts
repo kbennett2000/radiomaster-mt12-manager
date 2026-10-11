@@ -81,26 +81,39 @@ const choicesOf = (feature: Feature): HowChoices => ({
   swapped: feature.kind === 'twoSpeedTransmission' && feature.swapped === true,
 })
 
-/** One control and what it does on a model. `does` is null when the model does not use it. */
+/** One control and what it does on a model. */
 export interface ControlLine {
   control: ControlId
+  /**
+   * The short name of each job it does, such as "2-speed transmission" or "Cruise control, speed".
+   * Empty when the model does not use it. The picture of the radio labels the control with these.
+   */
+  jobs: readonly string[]
+  /** The same jobs in full sentences, for the list. Null when the model does not use it. */
   does: string | null
 }
 
-/** Every control this radio has, in the order they sit on it, with what each does on the model. */
+/**
+ * Every control this radio has, in the order they sit on it, with what each does on the model.
+ * The list of controls and the picture of the radio both read this, so they cannot disagree.
+ */
 export function whatEachControlDoes(features: readonly Feature[], baseFitting: BaseFitting | null): ControlLine[] {
   const jobs = features.flatMap(jobsOf)
   return controlsFor(baseFitting).map(({ id, kind }) => {
-    const mine = jobs.filter((job) => job.control === id)
-    if (mine.length === 0) return { control: id, does: null }
-    const lines = mine.map((job) => {
-      // Cruise control uses two controls, so each line says which part this control does.
-      let name = featureName(job.feature)
-      if (job.working === 'cruiseOnOff') name = strings.addModel.review.jobPart(name, how.cruiseOnOffPart)
-      if (job.working === 'cruiseSpeed') name = strings.addModel.review.jobPart(name, how.cruiseSpeedPart)
-      return strings.addModel.review.job(name, howItWorks(job.working, kind, choicesOf(job.feature)))
-    })
-    return { control: id, does: lines.join(' ') }
+    const mine = jobs
+      .filter((job) => job.control === id)
+      .map((job) => {
+        // Cruise control uses two controls, so each one says which part it does.
+        let name = featureName(job.feature)
+        if (job.working === 'cruiseOnOff') name = strings.addModel.review.jobPart(name, how.cruiseOnOffPart)
+        if (job.working === 'cruiseSpeed') name = strings.addModel.review.jobPart(name, how.cruiseSpeedPart)
+        return { name, sentence: strings.addModel.review.job(name, howItWorks(job.working, kind, choicesOf(job.feature))) }
+      })
+    return {
+      control: id,
+      jobs: mine.map((job) => job.name),
+      does: mine.length > 0 ? mine.map((job) => job.sentence).join(' ') : null,
+    }
   })
 }
 
