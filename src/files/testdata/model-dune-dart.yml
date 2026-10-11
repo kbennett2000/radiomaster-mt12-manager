@@ -1,0 +1,75 @@
+semver: 2.10.0
+header: 
+   name: "Dune Dart"
+telemetryProtocol: 0
+trimInc: 0
+hatsMode: GLOBAL
+mixData: 
+ -
+   weight: 100
+   destCh: 0
+   srcRaw: I0
+   mltpx: ADD
+   offset: 0
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+ -
+   weight: 100
+   destCh: 1
+   srcRaw: I1
+   mltpx: ADD
+   offset: 0
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+limitData: 
+   0:
+      min: 0
+      max: 0
+      revert: 0
+      name: "STR"
+expoData: 
+ -
+   mode: 3
+   srcRaw: ST
+   chn: 0
+   swtch: "NONE"
+   flightModes: 000000010
+   weight: 85
+   name: "Turn"
+   offset: 4
+ -
+   mode: 2
+   srcRaw: TH
+   chn: 1
+   swtch: "SB1"
+   flightModes: 000000000
+   weight: 70
+   name: ""
+   offset: -6
+thrTraceSrc: TH
+switchWarningState: AdBu
+rssiSource: none
+moduleData: 
+   0:
+      type: TYPE_MULTIMODULE
+      subType: 99,1
+      channelsStart: 0
+      channelsCount: 16
+screens: 
+   0:
+      type: BARS
+      u: 
+         bars: 
+            0:
+               source: I3
+               barMin: -80
+               barMax: 80
+            1:
+               source: I5
+               barMin: -20
+               barMax: 60
+view: 0
+modelRegistrationID: ""
+modelTelemetryDisabled: GLOBAL

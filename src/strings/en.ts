@@ -7,6 +7,7 @@
 import { APP_NAME } from '../config/app.ts'
 import type { BrandId, LightColour, ReceiverTypeId } from '../domain/catalog.ts'
 import type { ExtraKind, ExtraProblem } from '../domain/extras.ts'
+import type { RefusalReason } from '../files/document.ts'
 import type { LeftAlone } from '../domain/leftAlone.ts'
 import type {
   CustomWorks,
@@ -855,6 +856,24 @@ export const strings = {
       extras: 'Extras',
       feedback: 'Radio feedback',
     } satisfies Record<EditPart, string>,
+  },
+
+  // One of the radio's own files that the app will not read, because it is not laid out the way
+  // the radio lays its files out. Each message names the line, so the file can be looked at.
+  // No page shows these yet.
+  files: {
+    refused: {
+      notText: (line: number) => `Line ${line} has something in it that is not plain text.`,
+      empty: (line: number) => `The file is empty. It has no line ${line}.`,
+      lineEnding: (line: number) => `Line ${line} does not end the way your radio ends a line.`,
+      indent: (line: number) => `Line ${line} starts with a number of spaces your radio never uses.`,
+      tooDeep: (line: number) => `Line ${line} is set further in than the line above it allows.`,
+      notALine: (line: number) => `Line ${line} is not written the way your radio writes a line.`,
+      value: (line: number) => `Line ${line} has a value written in a way the app does not know.`,
+      repeatedKey: (line: number) => `Line ${line} uses a name that the same group has already used.`,
+      dashOutsideList: (line: number) => `Line ${line} starts a list item where there is no list.`,
+      emptyItem: (line: number) => `Line ${line} starts a list item that has nothing in it.`,
+    } satisfies Record<RefusalReason, (line: number) => string>,
   },
 
   comingNext: {

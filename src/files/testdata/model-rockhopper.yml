@@ -1,0 +1,182 @@
+semver: 2.10.0
+header: 
+   name: "Rockhopper"
+   modelId: 
+      0:
+         val: 7
+telemetryProtocol: 0
+thrTrim: 0
+trimInc: 0
+extendedLimits: 1
+hatsMode: GLOBAL
+mixData: 
+ -
+   weight: 100
+   destCh: 0
+   srcRaw: I0
+   mltpx: ADD
+   offset: 0
+   swtch: "NONE"
+   flightModes: 000000000
+   name: ""
+ -
+   weight: 65
+   destCh: 1
+   srcRaw: P1
+   mltpx: ADD
+   offset: -12
+   swtch: "L3"
+   flightModes: 000000000
+   curve: 
+      type: 0
+      value: 80
+   delayUp: 0
+   name: "CRZ"
+ -
+   weight: 100
+   destCh: 2
+   srcRaw: ls(4)
+   mltpx: ADD
+   offset: 0
+   swtch: "!L2"
+   flightModes: 000000000
+   name: "LCK"
+limitData: 
+   0:
+      min: 120
+      max: -140
+      revert: 1
+      name: "STR"
+   1:
+      min: 0
+      max: 0
+      revert: 0
+      name: "THR"
+   4:
+      min: -30
+      max: 30
+      revert: 0
+      name: ""
+expoData: 
+ -
+   mode: 3
+   srcRaw: ST
+   chn: 0
+   swtch: "NONE"
+   flightModes: 000000000
+   weight: 95
+   name: "Steer"
+   offset: 2
+   curve: 
+      type: 1
+      value: 35
+ -
+   mode: 3
+   srcRaw: TH
+   chn: 1
+   swtch: "NONE"
+   flightModes: 000000000
+   weight: 90
+   name: "Soft start"
+   offset: 0
+curves: 
+   0:
+      type: 1
+      smooth: 1
+      points: 2
+      name: "THR"
+points: 
+   0:
+      val: -100
+   1:
+      val: -40
+   2:
+      val: 0
+   3:
+      val: 55
+   4:
+      val: 100
+logicalSw: 
+   0:
+      func: FUNC_AND
+      def: "TrimThrUp,TrimThrUp"
+      andsw: "NONE"
+      delay: 0
+   1:
+      func: FUNC_STICKY
+      def: "L1,!L2"
+      andsw: "NONE"
+      delay: 0
+customFn: 
+   0:
+      swtch: "SA2"
+      func: HAPTIC
+      def: "1,0,60"
+   1:
+      swtch: "!L2"
+      func: PLAY_SOUND
+      def: "Bp1,1,1x"
+   2:
+      swtch: "L2"
+      func: OVERRIDE_CHANNEL
+      def: "3,-70,1"
+flightModeData: 
+   0:
+      trim: 
+         0:
+            value: 12
+            mode: 0
+         1:
+            value: -3
+            mode: 0
+      name: ""
+      swtch: "NONE"
+      gvars: 
+         0:
+            val: 5
+         1:
+            val: -5
+thrTraceSrc: TH
+switchWarningState: 
+rssiSource: none
+rfAlarms: 
+   warning: 51
+   critical: 47
+potsWarnMode: WARN_OFF
+moduleData: 
+   0:
+      type: TYPE_MULTIMODULE
+      subType: 74,2
+      channelsStart: 0
+      channelsCount: 12
+      failsafeMode: HOLD
+      mod: 
+         multi: 
+            disableTelemetry: 1
+            optionValue: -8
+inputNames: 
+   0:
+      val: "ST"
+   1:
+      val: "TH"
+   4:
+      val: "Lck"
+screens: 
+   0:
+      type: TEXT_ROWS
+      u: 
+         lines: 
+            0:
+               sources: 
+                  0:
+                     val: I2
+                  1:
+                     val: I3
+            1:
+               sources: 
+                  0:
+                     val: I4
+view: 0
+modelRegistrationID: ""
+usbJoystickIfMode: JOYSTICK
+modelTelemetryDisabled: GLOBAL
