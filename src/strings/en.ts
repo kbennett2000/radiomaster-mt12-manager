@@ -784,6 +784,9 @@ export const strings = {
       leave: 'Leave',
     },
 
+    // On the Extras page. The wizard's own help text talks about skipping a step, which does not fit here.
+    extrasHelp: 'Tick what your vehicle has. Untick anything it no longer has.',
+
     // Said under the receiver list once a different receiver is picked.
     bindAgainWarning: 'After you change the receiver, you will need to bind it again.',
 
