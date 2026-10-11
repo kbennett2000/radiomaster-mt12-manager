@@ -95,6 +95,15 @@ export function gyroGainPortFor(receiverTypeId: ReceiverTypeId | null): number |
   return receiver?.gyroGainPort ?? null
 }
 
+/**
+ * The receiver type the radio's module picks with these two numbers, or null when the app's list
+ * has none. A model's file holds the two numbers.
+ */
+export function receiverTypeForNumbers(first: number, second: number): ReceiverTypeId | null {
+  const receiver = RECEIVER_TYPES.find((type) => type.moduleNumbers[0] === first && type.moduleNumbers[1] === second)
+  return receiver?.id ?? null
+}
+
 /** The controls a radio really has: the ones every MT12 has, plus those its base fitting adds. */
 export const controlsFor = (baseFitting: BaseFitting | null): readonly ControlDefinition[] =>
   MT12.controls.filter(

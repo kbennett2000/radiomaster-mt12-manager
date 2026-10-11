@@ -1,0 +1,66 @@
+checksum: 4821
+manuallyEdited: 0
+timezoneMinutes: 0
+hatsMode: TRIMS_ONLY
+semver: 2.10.0
+board: mt12
+calib: 
+   ST:
+      mid: 1010
+      spanNeg: 700
+      spanPos: 705
+   TH:
+      mid: 820
+      spanNeg: 610
+      spanPos: 990
+   P1:
+      mid: 1000
+      spanNeg: 1000
+      spanPos: 1000
+currModel: 1
+contrast: 20
+txVoltageCalibration: -4
+backlightMode: backlight_mode_all
+internalModule: TYPE_MULTIMODULE
+trainer: 
+   mix: 
+      0:
+         srcChn: 0
+         mode: REPL
+         studWeight: 100
+      1:
+         srcChn: 1
+         mode: REPL
+         studWeight: 100
+view: 0
+beepMode: mode_all
+PPM_Multiplier: 0
+ttsLanguage: "en"
+serialPort: 
+   VCP:
+      mode: NONE
+      power: 1
+potsConfig: 
+   P1:
+      type: without_detent
+      inv: 1
+      name: "Trim"
+   P2:
+      type: with_detent
+      inv: 0
+      name: ""
+switchConfig: 
+   SA:
+      type: 3pos
+      name: "Gear"
+   SB:
+      type: 2pos
+      name: ""
+   FL1:
+      type: 2pos
+      name: "Aux"
+backlightColor: 0
+bluetoothName: "RH-0042-"
+ownerRegistrationID: "Bench"
+rotEncMode: 0
+modelTelemetryDisabled: 0

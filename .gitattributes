@@ -1,0 +1,2 @@
+# The made-up radio files are kept byte for byte on every computer: their line endings are part of what is tested.
+src/files/testdata/*.yml -text
